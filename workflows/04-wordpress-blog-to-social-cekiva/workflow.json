@@ -1,0 +1,438 @@
+{
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "name": "WordPress Blog to Social → CEKIVA (Facebook, Instagram, LinkedIn, Threads, Bluesky)",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "f5bb7898-44eb-45bf-b199-2146c8e901f6",
+      "name": "When clicking ‘Test workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        -220,
+        -80
+      ],
+      "parameters": {},
+      "typeVersion": 1
+    },
+    {
+      "id": "1451692d-8e8d-4da7-be3e-b4dd20319c7a",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "position": [
+        1080,
+        520
+      ],
+      "parameters": {
+        "model": "google/gemini-3.5-flash",
+        "options": {}
+      },
+      "credentials": {
+        "openRouterApi": {
+          "id": "",
+          "name": "openRouterApi Credential"
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "6768f867-666d-4c41-b77a-1bfb389b0329",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        1300,
+        520
+      ],
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"facebook\": {\n      \"type\": \"string\"\n    },\n    \"instagram\": {\n      \"type\": \"string\"\n    },\n    \"linkedin\": {\n      \"type\": \"string\"\n    },\n    \"threads\": {\n      \"type\": \"string\"\n    },\n    \"bluesky\": {\n      \"type\": \"string\"\n    }\n  }\n}"
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "583a8459-3574-44e6-85bf-a33b9a4bf9f4",
+      "name": "Social Media Manager",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        1100,
+        300
+      ],
+      "parameters": {
+        "text": "=Generate social content from the following text with title \"{{ $('Get Post').item.json.title.rendered }}\" (in the same language):\n\n'''\n{{ $('Get Post').item.json.content.rendered }}\n'''",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Your goal is to create engaging and informative content for LinkedIn, Instagram, Facebook, Threads and Bluesky while ensuring each post aligns with the platform’s audience, tone, and style. Content should reflect the company’s expertise, providing value-driven insights, tutorials, reviews, and discussions that resonate with tech professionals, enthusiasts, and businesses.\n\nEach post should be optimized for engagement, using platform-specific hashtags to improve reach and SEO. Maintain a professional yet approachable tone that promotes trust and authority in the tech space.\n\nContent Creation Best Practices:\nPost Optimization: Adapt content format, style, and hashtags based on each social media platform’s algorithm and audience engagement patterns.\nSEO & Hashtags: Use a balanced mix of general hashtags and platform-specific trending hashtags to maximize reach.\nEngagement-driven content: Focus on tech tutorials, IT industry updates, comparisons, reviews, and in-depth discussions that spark engagement.\nConsistency: Maintain a consistent tone and visual identity across all platforms, while tailoring content to each audience.\nData-driven trends: Regularly analyze post performance and adjust your hashtag strategy to reflect trending discussions within your topic. High-quality, relevant, and engaging copy that appeals to professionals, businesses, and enthusiasts of your topic must be provided.\n\n### Platform-specific requirements:\n1. **LinkedIn**:\n- Style: Professional and informative.\n- Tone: Focus on business results and what the reader can apply.\n- Content length: 3-4 sentences, detailed and insightful.\n- Hashtags: Create hashtags that are compatible with your topic.\n- Call to action: Engage businesses and professionals by encouraging comments or visits to the article.\n\n2. **Instagram**:\n- Style: Visual storytelling.\n- Tone: Inspiring and engaging.\n- Content length: 2-3 sentences, paired with creative captions and emojis.\n- Images: Highlight the key idea of the article in one striking visual moment.\n- Call to action: Use phrases like “Swipe to see more,” “Tag your coworkers,” or “Celebrate with us!”\n- Hashtags: Create hashtags that resonate with your topic\n\n3. **Facebook**:\n- Style: Friendly and relevant.\n- Tone: Community-focused, sharing stories, accomplishments, or updates.\n- Content length: 2-3 sentences, slightly informal but still reflective of your company’s values.\n- Call to Action: Encourage likes, shares, and comments from your community\n\n4. **Threads**:\n- Style: Conversational and direct.\n- Tone: Friendly, like a message to a colleague.\n- Content length: at most 450 characters, including hashtags (no more than 3).\n- Call to action: invite replies and opinions.\n\n5. **Bluesky**:\n- Style: Plain and friendly.\n- Tone: Open, no hype.\n- Content length: at most 250 characters, including hashtags (no more than 2).\n- Call to action: invite replies and reposts.\n\nWith this guide, generate posts for all platforms for the inputs below by inserting them into the specified json structure;\n\nRules:\n- Do not put the article's link in the text: the workflow appends it where it fits.\n- Return ONLY the five fields facebook, instagram, linkedin, threads, bluesky."
+            }
+          ]
+        },
+        "promptType": "define",
+        "hasOutputParser": true
+      },
+      "typeVersion": 1.5
+    },
+    {
+      "id": "634af127-cd08-4beb-99a8-daa626793736",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -60,
+        -160
+      ],
+      "parameters": {
+        "width": 420,
+        "height": 260,
+        "content": "The WordPress post id arrives by webhook (or the manual test) and the post is loaded with its link and featured image."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "fe599e8f-ff45-4aec-b70e-f0dc75b929d5",
+      "name": "Get Post",
+      "type": "n8n-nodes-base.wordpress",
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "postId": "={{ $json['POST ID'] }}",
+        "options": {},
+        "operation": "get"
+      },
+      "credentials": {
+        "wordpressApi": {
+          "id": "",
+          "name": "wordpressApi Credential"
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "09059725-47dd-44ff-bcbd-f83d3bb3941d",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        380,
+        -160
+      ],
+      "parameters": {
+        "width": 360,
+        "height": 260,
+        "content": "The SMM chain reads the post and writes the most suitable copy for each network: Facebook, Instagram, LinkedIn, Threads and Bluesky."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "687cf808-1355-4bec-aad3-2395efd5a41c",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -220,
+        -680
+      ],
+      "parameters": {
+        "color": 3,
+        "width": 960,
+        "height": 320,
+        "content": "## Publishing\n\nOne CEKIVA request per network, each with its own copy and the post's featured image. Results come back as one uniform row per network."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "c4a00000-0000-4000-8000-000000000001",
+      "name": "WordPress webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        200
+      ],
+      "webhookId": "c4a00000-0000-4000-8000-0000000000a1",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cekiva-wordpress",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA webhook secret"
+        }
+      }
+    },
+    {
+      "id": "c4a00000-0000-4000-8000-00000000000b",
+      "name": "Test Post ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        400
+      ],
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"post_id\": \"\"\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c4a00000-0000-4000-8000-000000000002",
+      "name": "Post ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Accepts the WordPress webhook (post id in the body) or the manual test. Outputs { post_id, client_id }.\nconst j = $input.first().json || {};\nconst b = (j.body && typeof j.body === 'object') ? j.body : j;\nconst raw = b.post_id ?? b.postId ?? b.ID ?? b.id ?? (b.post && (b.post.ID ?? b.post.id)) ?? '';\nconst post_id = String(raw).trim();\nif (!/^[0-9]+$/.test(post_id)) {\n  throw new Error('No WordPress post id: send {\"post_id\": 123} to the webhook (or fill \"Test Post ID\" for a manual test). Got: ' + JSON.stringify(raw));\n}\nreturn [{ json: { post_id, client_id: String(b.client_id || '').trim() } }];\n"
+      }
+    },
+    {
+      "id": "c4a00000-0000-4000-8000-000000000003",
+      "name": "Featured image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ new URL($json.link).origin }}/wp-json/wp/v2/media/{{ $json.featured_media || 0 }}",
+        "sendHeaders": false,
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c4a00000-0000-4000-8000-000000000004",
+      "name": "Build CEKIVA posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// CEKIVA publishing: one POST /v1/posts per platform, each with the copy the AI wrote for THAT platform.\n// X/Twitter is not here on purpose: CEKIVA retired that channel.\nconst CONFIG = {\n  CLIENT_ID: '',      // optional: a CEKIVA client workspace (GET https://cekiva.com/api/v1/clients). The webhook can also send \"client_id\". Empty = your primary workspace.\n  PUBLISH_NOW: true,  // true = publish right away; false = publish at SCHEDULED_AT\n  SCHEDULED_AT: '',   // ISO 8601 with a time zone, e.g. 2026-12-01T09:00:00Z (used only when PUBLISH_NOW is false)\n  APPEND_LINK: true,  // add the blog post's link to the copy (when it still fits the platform's length limit)\n};\nconst LIMITS = { threads: 500, bluesky: 300 }; // other platforms: no practical limit here\n\nconst out = ($('Social Media Manager').first().json.output) || {};\nconst post = $('Get Post').first().json || {};\nconst link = post.link || '';\nconst meta = $('Featured image').first().json || {};\nconst body = meta.body && typeof meta.body === 'object' ? meta.body : meta;\nconst imageUrl = (typeof body.source_url === 'string' && /^https?:\\/\\//.test(body.source_url)) ? body.source_url : null;\nconst clientId = String($('Post ID').first().json.client_id || CONFIG.CLIENT_ID || '').trim();\n\n// keys = CEKIVA platform ids; values = the AI's field for that platform\nconst copy = { facebook_page: out.facebook, instagram: out.instagram, linkedin: out.linkedin, threads: out.threads, bluesky: out.bluesky };\nconst scheduleAt = !CONFIG.PUBLISH_NOW && CONFIG.SCHEDULED_AT ? CONFIG.SCHEDULED_AT : null;\n\nreturn Object.entries(copy)\n  .filter(([, text]) => typeof text === 'string' && text.trim())\n  .map(([platform, text]) => {\n    let content = text.trim();\n    const withLink = link && !content.includes(link) ? content + '\\n\\n' + link : content;\n    // Instagram captions do not make links clickable, so the link is not added there.\n    if (CONFIG.APPEND_LINK && platform !== 'instagram' && withLink.length <= (LIMITS[platform] || Infinity)) content = withLink;\n    // The body of POST /v1/posts exactly as the CEKIVA API expects it.\n    const request = { platforms: [platform], content, scheduled_for: scheduleAt || new Date().toISOString(), publish_now: !scheduleAt };\n    if (imageUrl) { request.image_url = imageUrl; request.media_urls = [imageUrl]; } // Instagram needs an image: without one CEKIVA answers IMAGE_REQUIRED for that row\n    if (clientId) request.client_id = clientId;\n    return { json: { platform, request } };\n  });\n"
+      }
+    },
+    {
+      "id": "c4a00000-0000-4000-8000-000000000005",
+      "name": "CEKIVA: POST /v1/posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1800,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://cekiva.com/api/v1/posts",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c4a00000-0000-4000-8000-000000000006",
+      "name": "Label CEKIVA results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2060,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// One uniform result row per platform.\nconst sent = $('Build CEKIVA posts').all();\nreturn $input.all().map((item, i) => {\n  const r = item.json;\n  const platform = sent[i] ? sent[i].json.platform : 'unknown';\n  const body = r.body;\n  const post = Array.isArray(body) ? body[0] : null;\n  const err = body && !Array.isArray(body) && body.error && typeof body.error === 'object' ? body.error : null;\n  const status = Number(r.statusCode) || null;\n  const ok = status !== null && status >= 200 && status < 300 && !!post;\n  return { json: {\n    platform,\n    result: ok ? 'Success' : 'Error',\n    http_status: status,\n    post_id: post ? post.id : null,\n    post_status: post ? post.status : null,\n    credits_charged: post ? post.credits_charged : null,\n    error_code: err ? err.code : (r.error ? 'CEKIVA_UNREACHABLE' : null),\n    error_message: err ? err.message : (r.error ? String(r.error.message || r.error).slice(0, 200) : (ok ? null : 'Unexpected response')),\n    hint: err ? err.hint : null,\n  } };\n});\n"
+      }
+    },
+    {
+      "id": "c4a00000-0000-4000-8000-000000000007",
+      "name": "CEKIVA setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -420
+      ],
+      "parameters": {
+        "content": "## 🚀 Setup: WordPress blog post → social posts through CEKIVA\n\n**1 · CEKIVA credential (required)**\nCredentials → New → *Header Auth*: name `CEKIVA API key`, header `Authorization`, value `Bearer tplk_...` (CEKIVA → Settings → API keys). Select it in **CEKIVA: POST /v1/posts**. Connect your Facebook Page, Instagram, LinkedIn, Threads and Bluesky once in CEKIVA.\n\n**2 · Webhook secret (required)**\nCredentials → New → *Header Auth*: name `CEKIVA webhook secret`, header `X-Webhook-Secret`, value = a long random string. Select it in **WordPress webhook**. WordPress must send that header; an open webhook would let anyone spend your credits.\n\n**3 · WordPress + AI**\nSelect your WordPress credential (an application password) in **Get Post** and your OpenRouter credential in **OpenRouter Chat Model**.\n\n**4 · Send the post id**\nPOST `{\"post_id\": 123}` (optionally `\"client_id\": \"<client workspace id>\"`) to the webhook when a post is published. Test by hand: fill **Test Post ID** and run **Test workflow**.\n\n**Image.** The post's featured image goes to every network (Instagram needs one). No featured image = Instagram answers IMAGE_REQUIRED, the others still post.\n\n**X (Twitter) is excluded** on purpose: CEKIVA retired that channel.\nPosting costs CEKIVA credits (prices are shown in CEKIVA, not here).\n\nBased on https://n8n.io/workflows/3086",
+        "height": 560,
+        "width": 700,
+        "color": 5
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "connections": {
+    "WordPress webhook": {
+      "main": [
+        [
+          {
+            "node": "Post ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "Test Post ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Post ID": {
+      "main": [
+        [
+          {
+            "node": "Post ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post ID": {
+      "main": [
+        [
+          {
+            "node": "Get Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Post": {
+      "main": [
+        [
+          {
+            "node": "Featured image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Featured image": {
+      "main": [
+        [
+          {
+            "node": "Social Media Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Social Media Manager": {
+      "main": [
+        [
+          {
+            "node": "Build CEKIVA posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CEKIVA posts": {
+      "main": [
+        [
+          {
+            "node": "CEKIVA: POST /v1/posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEKIVA: POST /v1/posts": {
+      "main": [
+        [
+          {
+            "node": "Label CEKIVA results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Social Media Manager",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Social Media Manager",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -21,6 +21,7 @@ X (Twitter) is not supported: CEKIVA retired that channel.
 | [01](workflows/01-ai-multiplatform-content-factory) | **AI multi-platform content factory** | A form asks for a topic; AI researches it and writes a separate post for Instagram, Facebook and LinkedIn; you approve by e-mail; an image is generated; CEKIVA publishes everywhere. |
 | [02](workflows/02-cekiva-core-publisher) | **CEKIVA core publisher** | A protected webhook that validates a payload (`text`, `platforms`, `media_urls`, `workspace_id`, `scheduled_at`), publishes it through CEKIVA and answers `SUCCESS` or a clear `ERROR`. Plug it behind any trigger. |
 | [03](workflows/03-ai-video-generation-omni-flash-cekiva) | **AI video generation (Gemini Omni 1.1 Flash)** | Every day AI invents a video idea and a prompt, CEKIVA generates the video with Gemini Omni 1.1 Flash and publishes it to TikTok, YouTube, Instagram and Facebook Reels. No video vendor, file host or per-network nodes. |
+| [04](workflows/04-wordpress-blog-to-social-cekiva) | **WordPress blog to social** | A webhook receives a WordPress post id; AI writes a version for Facebook, Instagram, LinkedIn, Threads and Bluesky; CEKIVA publishes each with the featured image and a link. X (Twitter) is not included. |
 
 ## Quick start (every workflow)
 
@@ -63,4 +64,4 @@ Issues and pull requests are welcome: new workflows, fixes, better docs. Please 
 
 ## License
 
-[MIT](LICENSE). Workflows 01 and 03 are derived from community templates; see their READMEs for the credit and what that means.
+[MIT](LICENSE). Workflows 01, 03 and 04 are derived from community templates; see their READMEs for the credit and what that means.
