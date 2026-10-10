@@ -1,0 +1,453 @@
+{
+  "name": "CEKIVA – Social publishing (webhook → API)",
+  "nodes": [
+    {
+      "id": "n01",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cekiva-publish",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA webhook secret"
+        }
+      }
+    },
+    {
+      "id": "n02",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "cekiva_base_url",
+              "value": "https://cekiva.com/api/v1",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "n03",
+      "name": "Validate & Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Validate & prepare: turns the incoming payload into the exact body of CEKIVA's POST /v1/posts.\nconst SUPPORTED = ['linkedin', 'tiktok', 'youtube', 'pinterest', 'bluesky', 'discord', 'facebook_page', 'instagram', 'threads', 'facebook_reels'];\nconst ALIASES = { facebook: 'facebook_page', 'facebook-page': 'facebook_page', 'facebook page': 'facebook_page', reels: 'facebook_reels', 'facebook-reels': 'facebook_reels', 'facebook reels': 'facebook_reels', twitter: 'x' };\nconst RETIRED = { x: 'X (Twitter) is retired in CEKIVA and can no longer be posted to.' };\nconst UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\n\nconst item = $input.first().json;\nconst baseUrl = String(item.cekiva_base_url || '').trim().replace(/\\/+$/, '');\n// The payload comes as the webhook body; any other trigger (Google Sheets, ...) may deliver the fields at the top level.\nconst p = item.body && typeof item.body === 'object' && !Array.isArray(item.body) ? item.body : item;\n\nconst list = (v) => (Array.isArray(v) ? v : typeof v === 'string' ? v.split(/[,\\n;]+/) : v == null ? [] : [v]);\nconst bool = (v) => v === true || (typeof v === 'string' && v.trim().toLowerCase() === 'true');\nconst errors = [];\n\nif (!/^https?:\\/\\//i.test(baseUrl)) errors.push('Setup: \"cekiva_base_url\" in the Config node must be an http(s) URL such as https://cekiva.com/api/v1.');\n\nconst text = p.text == null ? '' : String(p.text).trim();\nconst media = list(p.media_urls).map((u) => String(u).trim()).filter(Boolean);\nconst badMedia = media.filter((u) => !/^https?:\\/\\/\\S+$/i.test(u));\nif (badMedia.length) errors.push('\"media_urls\" must be public http(s) URLs; invalid: ' + badMedia.join(', '));\nif (!text && media.length === 0) errors.push('\"text\" is required (it may only be empty when \"media_urls\" is given).');\n\nconst platforms = [...new Set(list(p.platforms).map((x) => String(x).trim().toLowerCase()).filter(Boolean).map((x) => ALIASES[x] || x))];\nif (platforms.length === 0) errors.push('\"platforms\" is required: an array (or comma-separated string) with at least one of: ' + SUPPORTED.join(', ') + '.');\nfor (const x of platforms) {\n  if (RETIRED[x]) errors.push(RETIRED[x]);\n  else if (!SUPPORTED.includes(x)) errors.push('Unsupported platform \"' + x + '\". Supported: ' + SUPPORTED.join(', ') + '.');\n}\n\nlet scheduledFor = null;\nif (p.scheduled_at != null && String(p.scheduled_at).trim() !== '') {\n  const ms = Date.parse(String(p.scheduled_at));\n  if (Number.isNaN(ms)) errors.push('\"scheduled_at\" must be an ISO 8601 timestamp with a time zone, e.g. 2026-12-01T09:00:00Z.');\n  else if (ms <= Date.now() + 30 * 1000) errors.push('\"scheduled_at\" must be in the future (at least 30 seconds ahead). Omit it to publish right away.');\n  else scheduledFor = new Date(ms).toISOString();\n}\n\nconst workspaceId = p.workspace_id == null ? '' : String(p.workspace_id).trim();\nif (workspaceId && !UUID.test(workspaceId)) errors.push('\"workspace_id\" must be the UUID of a client workspace (listed by GET /v1/clients) — omit it to use your primary workspace.');\n\nif (errors.length) {\n  return [{ json: { ok: false, http_status: 422, body: { status: 'ERROR', http_status: 422, error: { kind: 'VALIDATION', code: 'INVALID_INPUT', stage: 'input', upstream_status: null, message: errors[0], hint: 'Fix the fields named in \"details\" and send the request again.', details: errors } } } }];\n}\n\n// The body of POST /v1/posts exactly as the CEKIVA backend expects it (SchedulePostRequest).\nconst request = { platforms, content: text, scheduled_for: scheduledFor || new Date().toISOString(), publish_now: !scheduledFor };\nif (media.length === 1) request.image_url = media[0];\nif (media.length > 1) { request.image_url = media[0]; request.media_urls = media; }\nif (bool(p.require_approval)) request.require_approval = true; // wait for the client's approval link before publishing\nif (bool(p.ai_generated)) request.ai_generated = true; // TikTok \"AI-generated\" label: only ever set by the poster, never automatically\n\nreturn [{ json: { ok: true, base_url: baseUrl, lookup_workspace: workspaceId || null, request } }];\n"
+      }
+    },
+    {
+      "id": "n04",
+      "name": "Valid input?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n05",
+      "name": "Workspace given?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        220
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !!$json.lookup_workspace }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n06",
+      "name": "Resolve workspace",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1100,
+        120
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.base_url }}/clients",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n07",
+      "name": "Pick client",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        120
+      ],
+      "parameters": {
+        "jsCode": "// Maps the caller's workspace_id to the client_id that CEKIVA's public API works with (GET /v1/clients lists every client workspace).\nconst prep = $('Validate & Prepare').first().json;\nconst r = $input.first().json; // full response of GET /v1/clients\nif (r.error || r.statusCode !== 200) {\n  return [{ json: { ok: false, stage: 'resolve_workspace', statusCode: r.statusCode, body: r.body, error: r.error } }];\n}\nconst wanted = String(prep.lookup_workspace).toLowerCase();\nconst clients = (r.body && r.body.clients) || [];\nconst hit = clients.find((c) => [c.workspace_id, c.id, c.external_ref].some((v) => v && String(v).toLowerCase() === wanted));\nif (!hit) {\n  const known = clients.map((c) => (c.workspace_id || c.id) + ' (' + c.name + ')');\n  return [{ json: { ok: false, stage: 'resolve_workspace', statusCode: 404, body: { error: { code: 'WORKSPACE_NOT_FOUND', message: 'workspace_id ' + prep.lookup_workspace + ' was not found among the workspaces of this API key.' + (known.length ? ' Available: ' + known.join('; ') + '.' : ' This key has no client workspaces yet — create one on the website first.'), hint: 'List the workspaces of this key with GET /v1/clients; client workspaces carry a workspace_id.' } } } }];\n}\nreturn [{ json: { ok: true, base_url: prep.base_url, request: { ...prep.request, client_id: hit.id }, workspace: { workspace_id: hit.workspace_id, client_id: hit.id, name: hit.name } } }];\n"
+      }
+    },
+    {
+      "id": "n08",
+      "name": "Client resolved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1540,
+        120
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "n09",
+      "name": "Dispatch: POST /posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1760,
+        260
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.base_url }}/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n10",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        360
+      ],
+      "parameters": {
+        "jsCode": "// Turns CEKIVA's answer (or any failure on the way) into one uniform response.\nconst r = $input.first().json;\nconst stage = r.stage || 'dispatch';\nconst status = Number(r.statusCode) || 0;\n// CEKIVA's structured error: { code: 'INSUFFICIENT_CREDITS', message: '...', hint: '...' } (English; the HTTP nodes send Accept-Language: en)\nconst up = r.body && typeof r.body === 'object' && !Array.isArray(r.body) && r.body.error && typeof r.body.error === 'object' ? r.body.error : null;\nconst detailOf = (b) => {\n  if (b == null) return '';\n  if (typeof b === 'string') return b.slice(0, 500);\n  if (typeof b.detail === 'string') return b.detail;\n  if (Array.isArray(b.detail)) return b.detail.map((d) => (d && d.msg) || JSON.stringify(d)).join('; ');\n  return JSON.stringify(b).slice(0, 500);\n};\n\nif ((status === 200 || status === 201) && stage === 'dispatch' && Array.isArray(r.body)) {\n  const posts = r.body.map((x) => ({ id: x.id, platform: x.platform, status: x.status, scheduled_for: x.scheduled_for, credits_charged: x.credits_charged }));\n  let workspace = null;\n  try { workspace = $('Pick client').first().json.workspace || null; } catch (e) { workspace = null; } // only when workspace_id was given\n  return [{ json: { http_status: 200, body: { status: 'SUCCESS', post_ids: posts.map((x) => x.id), posts, total_credits_charged: posts.reduce((s, x) => s + (x.credits_charged || 0), 0), workspace } } }];\n}\n\n// kind = the coarse class (stable, UPPERCASE); code = CEKIVA's specific error code (UPPERCASE) when it sent one\nconst KINDS = { 401: 'AUTH', 402: 'INSUFFICIENT_CREDITS', 403: 'FORBIDDEN', 404: 'NOT_FOUND', 422: 'VALIDATION', 429: 'TRIAL_LIMIT' };\nconst HINTS = { // used only when CEKIVA sent no hint of its own\n  AUTH: 'Check the \"CEKIVA API key\" credential (header Authorization: Bearer tplk_...).',\n  INSUFFICIENT_CREDITS: 'Top up credits in CEKIVA (the workspace owner pays for their members).',\n  FORBIDDEN: 'The Social Publisher module may be inactive, the account suspended or the client workspace archived.',\n  NOT_FOUND: 'Check workspace_id and the other identifiers.',\n  VALIDATION: 'CEKIVA rejected the content: see \"message\".',\n  TRIAL_LIMIT: 'Free-trial daily limit reached: pick another day or platform.',\n  SERVER_ERROR: 'CEKIVA answered with a server error. Nothing was published unless a post id came back.',\n  NETWORK: 'CEKIVA could not be reached. Check \"cekiva_base_url\" in the Config node and the network path from n8n to CEKIVA.',\n  CLIENT_ERROR: 'CEKIVA refused the request: see \"message\".',\n};\nlet kind; let code; let message; let http;\nif (!status) {\n  kind = 'NETWORK'; code = 'CEKIVA_UNREACHABLE';\n  message = String((r.error && (r.error.message || r.error.code)) || 'No response from CEKIVA.').slice(0, 300);\n  http = 502;\n} else if (status >= 500) {\n  kind = 'SERVER_ERROR'; code = (up && up.code) || 'CEKIVA_SERVER_ERROR'; message = (up && up.message) || detailOf(r.body) || ('HTTP ' + status); http = 502;\n} else {\n  kind = KINDS[status] || 'CLIENT_ERROR'; code = (up && up.code) || ('HTTP_' + status); message = (up && up.message) || detailOf(r.body) || ('HTTP ' + status); http = status;\n}\nconst hint = (up && up.hint) || HINTS[kind];\nreturn [{ json: { http_status: http, body: { status: 'ERROR', http_status: http, error: { kind, code, stage, upstream_status: status || null, message, hint } } } }];\n"
+      }
+    },
+    {
+      "id": "n11",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2200,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.body }}",
+        "options": {
+          "responseCode": "={{ $json.http_status }}"
+        }
+      }
+    },
+    {
+      "id": "n12",
+      "name": "Setup notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -260
+      ],
+      "parameters": {
+        "content": "CEKIVA social publishing — n8n template\n\nSETUP (once)\n1. Credentials → create two \"Header Auth\" credentials:\n   • \"CEKIVA API key\"  — Name: Authorization   Value: Bearer tplk_...  (create the key in CEKIVA: Settings → API keys)\n   • \"CEKIVA webhook secret\" — Name: X-Webhook-Secret   Value: a long random string (callers must send it)\n2. Open each node that shows a red credential warning and pick the credential.\n3. Config node: set cekiva_base_url (default https://cekiva.com/api/v1).\n4. Activate the workflow.\n\nCALL\nPOST <your n8n>/webhook/cekiva-publish   header X-Webhook-Secret: <secret>\n{ \"text\": \"Hello\", \"platforms\": [\"linkedin\",\"bluesky\"],\n  \"media_urls\": [\"https://.../image.jpg\"],          (optional)\n  \"workspace_id\": \"<client workspace UUID>\",        (optional; default = your primary workspace)\n  \"scheduled_at\": \"2026-12-01T09:00:00Z\" }          (optional; omitted = publish right away)\nOptional flags: require_approval (client approves first), ai_generated (TikTok AI label).\n\nANSWER\n200 {\"status\":\"SUCCESS\",\"post_ids\":[...],\"posts\":[...]}\n4xx/5xx {\"status\":\"ERROR\",\"error\":{\"kind\",\"code\",\"message\",\"hint\",\"stage\",\"upstream_status\"}}\n  kind = coarse class, code = CEKIVA's error code (INSUFFICIENT_CREDITS, SCHEDULE_TIME_PAST, ...): both UPPERCASE and stable.\n\nNOTES\n• Supported platforms: linkedin, tiktok, youtube, pinterest, bluesky, discord, facebook_page, instagram, threads, facebook_reels.\n• Every post costs credits when scheduled (the workspace owner pays). A repeated call creates a second post: there is no idempotency key.\n• \"message\" and \"hint\" are CEKIVA's own words in English (the HTTP nodes send Accept-Language: en); branch on \"code\" / \"kind\" or the HTTP status, not on the text.",
+        "height": 520,
+        "width": 760,
+        "color": 5
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Validate & Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Prepare": {
+      "main": [
+        [
+          {
+            "node": "Valid input?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid input?": {
+      "main": [
+        [
+          {
+            "node": "Workspace given?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workspace given?": {
+      "main": [
+        [
+          {
+            "node": "Resolve workspace",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dispatch: POST /posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve workspace": {
+      "main": [
+        [
+          {
+            "node": "Pick client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick client": {
+      "main": [
+        [
+          {
+            "node": "Client resolved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client resolved?": {
+      "main": [
+        [
+          {
+            "node": "Dispatch: POST /posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch: POST /posts": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Result": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
