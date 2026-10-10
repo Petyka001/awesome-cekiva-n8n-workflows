@@ -1,0 +1,691 @@
+{
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "name": "AI Video Generation (Gemini Omni 1.1 Flash) → CEKIVA (TikTok, YouTube, Instagram, Reels)",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "11a7c5b6-0db7-4d99-a1a0-e34e05c23ff5",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        340,
+        480
+      ],
+      "parameters": {
+        "width": 1200,
+        "height": 500,
+        "content": "# ✅ STEP 1 — Generate the idea and the video prompt with AI"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "2f3aec5c-4144-4e0c-b1c8-7f96dfe14370",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        340,
+        1020
+      ],
+      "parameters": {
+        "color": 3,
+        "width": 1200,
+        "height": 280,
+        "content": "# ✅ STEP 2 — Create the video with CEKIVA (Gemini Omni 1.1 Flash)"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "94db7d6e-ce83-4c9a-916c-c35c802f8d4d",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        340,
+        1340
+      ],
+      "parameters": {
+        "color": 4,
+        "width": 1200,
+        "height": 760,
+        "content": "# ✅ STEP 3 — Publish the video through CEKIVA"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "3ac616bc-67bb-494c-bd24-3753fc03e7dc",
+      "name": "Trigger: Run Daily Script Generator",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        500,
+        560
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "8ae30b31-2ac9-4b62-9094-ce36197d319d",
+      "name": "AI Agent: Generate Video Concept",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        660,
+        560
+      ],
+      "parameters": {
+        "text": "Give me an idea about [a Yeti speaking to a camera and doing a Vlog through his selfie stick]. ",
+        "options": {
+          "systemMessage": "=You are an AI designed to generate 1 immersive, realistic idea based on a user-provided topic. Your output must be formatted as a JSON array (single line) and follow all the rules below exactly.\n\nRULES:\n\nOnly return 1 idea at a time.\n\nThe user will provide a key topic (e.g. “urban farming,” “arctic survival,” “street food in Vietnam”).\n\nThe Idea must:\n\nBe under 13 words.\n\nDescribe an interesting and viral-worthy moment, action, or event related to the provided topic.\n\nCan be as surreal as you can get, doesn't have to be real-world!\n\nInvolves a character.\n\nThe Caption must be:\n\nShort, punchy, and viral-friendly.\n\nInclude one relevant emoji.\n\nInclude exactly 12 hashtags in this order:\n** 4 topic-relevant hashtags\n** 4 all-time most popular hashtags\n** 4 currently trending hashtags (based on live research)\n\nAll hashtags must be lowercase.\n\nSet Status to \"for production\" (always).\n\nThe Environment must:\n\nBe under 20 words.\n\nMatch the action in the Idea exactly.\n\nClearly describe:\n\nWhere the event is happening (e.g. rooftop, jungle trail, city alley, frozen lake)\n\nKey visuals or background details (e.g. smoke rising, neon lights, fog, birds overhead)\n\nMain participants (e.g. farmer, cook, mechanic, rescue team, animal)\n\nStyle of scene (e.g. cinematic realism, handheld docu-style, aerial tracking shot, macro close-up)\n\nOk with fictional settings\n\nOUTPUT FORMAT (single-line JSON array):\n\n\n[\n  {\n    \"Caption\": \"Short viral title with emoji #4_topic_hashtags #4_all_time_popular_hashtags #4_trending_hashtags\",\n    \"Idea\": \"Short idea under 13 words\",\n    \"Environment\": \"Brief vivid setting under 20 words matching the action\",\n    \"Status\": \"for production\"\n  }\n]\n"
+        },
+        "promptType": "define",
+        "hasOutputParser": true
+      },
+      "typeVersion": 1.9
+    },
+    {
+      "id": "1685126b-bd11-4798-aae9-c676d6cf743d",
+      "name": "Tool: Inject Creativity",
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "position": [
+        740,
+        820
+      ],
+      "parameters": {},
+      "typeVersion": 1
+    },
+    {
+      "id": "30b4a035-33df-4826-972d-0ed2dd8fbed9",
+      "name": "LLM: Generate Idea & Caption (GPT-4.1)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        580,
+        820
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "openAiApi Credential"
+        }
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "c1e92152-aa05-43dd-8522-23f1514cf0ad",
+      "name": "Parser: Extract JSON from Idea",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        900,
+        820
+      ],
+      "parameters": {
+        "jsonSchemaExample": "[\n  {\n    \"Caption\": \"Diver Removes Nets Off Whale 🐋 #whalerescue #marinelife #oceanrescue #seahelpers #love #nature #instagood #explore #viral #savenature #oceanguardians #cleanoceans\",\n    \"Idea\": \"Diver carefully cuts tangled net from distressed whale in open sea\",\n    \"Environment\": \"Open ocean, sunlight beams through water, diver and whale, cinematic realism\",\n    \"Status\": \"for production\"\n  }\n]\n"
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "02c2e969-0bb6-44fa-8707-37edc2cc77fd",
+      "name": "AI Agent: Create Video Prompt",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1180,
+        560
+      ],
+      "parameters": {
+        "text": "=Give me a video prompt for this idea:\n{{ $json.idea }}\n\nThis is the environment:\n{{ $json.environment_prompt }}\n\n",
+        "options": {
+          "systemMessage": "=SYSTEM PROMPT FOR GOOGLE video PROMPT AGENT\n\nYou are an AI agent that writes hyper-realistic, cinematic video prompts for an AI video model. Each prompt should describe a short, vivid selfie-style video clip featuring one unnamed character speaking or acting in a specific moment. The final video should look like found footage or documentary-style film — grounded, realistic, and immersive.\n\nREQUIRED STRUCTURE (FILL IN THE BRACKETS BELOW):\n\n[Scene paragraph prompt here]\n\nMain character: [description of character]\nThey say: [insert one line of dialogue, fits the scene and mood].\nThey [describe a physical action or subtle camera movement, e.g. pans the camera, shifts position, glances around].\nTime of Day: [day / night / dusk / etc.]\nLens: [describe lens]\nAudio: (implied) [ambient sounds, e.g. lion growls, wind, distant traffic, birdsong]\nBackground: [brief restatement of what is visible behind them]\n\nRULES FOR PROMPT GENERATION\n\nSingle paragraph only, 750–1500 characters. No line breaks or headings.\n\nOnly one human character. Never give them a name.\n\nInclude one spoken line of dialogue and describe how it’s delivered.\n\nCharacter must do something physical, even if subtle (e.g. glance, smirk, pan camera).\n\nUse selfie-style framing. Always describe the lens, stock, and camera behavior.\n\nScene must feel real and cinematic — like a short clip someone might record on a stylized camera.\n\nAlways include the five key technical elements: Time of Day, Lens, Film Stock, Audio, and Background.\n\nDO NOT DO THIS:\n\nDon’t name the character.\n\nDon’t include more than one character.\n\nDon’t describe subtitles or on-screen text.\n\nDon’t break the paragraph or use formatting.\n\nDon’t write vague or abstract scenes — always keep them grounded in physical detail."
+        },
+        "promptType": "define",
+        "hasOutputParser": true
+      },
+      "typeVersion": 1.9
+    },
+    {
+      "id": "010485e3-7b3f-496b-bcd5-05087a41805c",
+      "name": "Tool: Build Prompt Structure",
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "position": [
+        1380,
+        820
+      ],
+      "parameters": {},
+      "typeVersion": 1
+    },
+    {
+      "id": "acec06a9-c36d-4bff-a152-4a5b8b73808d",
+      "name": "LLM: Format Video Prompt (GPT-4.1)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        1200,
+        820
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "openAiApi Credential"
+        }
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-000000000001",
+      "name": "Idea fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// The idea agent returns a one-item array: Caption, Idea, Environment. The next steps use them under these names.\nconst item = ($json.output && $json.output[0]) || {};\nreturn [{ json: { idea: item.Idea || '', caption: item.Caption || '', environment_prompt: item.Environment || '' } }];\n"
+      }
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-000000000002",
+      "name": "CEKIVA: start video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2760,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://cekiva.com/api/v1/generate-video",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ topic: $json.output, quality: \"720p\", duration_seconds: 8, aspect_ratio: \"9:16\" }) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      }
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-000000000003",
+      "name": "Wait 30 s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3020,
+        300
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "webhookId": "c3a00000-0000-4000-8000-0000000000a3"
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-000000000004",
+      "name": "CEKIVA: video status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3280,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://cekiva.com/api/v1/generate-video/{{ $('CEKIVA: start video').first().json.job_id }}/status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": false,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      }
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-000000000005",
+      "name": "Evaluate video job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3540,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Reads the video job and decides where the loop goes: done | failed | timeout | pending.\n// The loop asks every 30 s; $runIndex counts the rounds, so a stuck job ends after about 15 minutes instead of looping forever.\nconst MAX_ROUNDS = 30;\nconst j = $json || {};\nlet route = 'pending';\nif (j.status === 'completed' && j.video_url) route = 'done';\nelse if (j.status === 'failed') route = 'failed';\nelse if ($runIndex >= MAX_ROUNDS) route = 'timeout';\nreturn [{ json: { route, status: j.status || null, video_url: j.video_url || null, error_message: j.error_message || null, credits_charged: j.credits_charged ?? null } }];\n"
+      }
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-000000000006",
+      "name": "Video ready?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3800,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "r-done",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "done",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "done"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "r-pending",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "pending",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pending"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "failed or timed out"
+        }
+      }
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-000000000007",
+      "name": "Video failed or timed out",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        4060,
+        520
+      ],
+      "parameters": {
+        "errorMessage": "={{ 'CEKIVA video job ' + $json.route + ': ' + ($json.error_message || $json.status || 'no answer') + '. Nothing was published.' }}"
+      }
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-000000000008",
+      "name": "Build CEKIVA posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4060,
+        200
+      ],
+      "parameters": {
+        "jsCode": "// CEKIVA publishing: one POST /v1/posts per platform with the finished video.\nconst CONFIG = {\n  PLATFORMS: ['tiktok', 'youtube', 'instagram', 'facebook_reels'], // CEKIVA platform ids that take a video. Remove the ones you did not connect.\n  CLIENT_ID: '',      // optional: id of one of your CEKIVA client workspaces (GET https://cekiva.com/api/v1/clients); empty = your primary workspace\n  PUBLISH_NOW: true,  // true = publish right away; false = publish at SCHEDULED_AT\n  SCHEDULED_AT: '',   // ISO 8601 with a time zone, e.g. 2026-12-01T09:00:00Z (used only when PUBLISH_NOW is false)\n  AI_LABEL: false,    // true = ask TikTok to mark the video \"AI-generated\". The poster's own decision: off by default.\n};\n\nconst videoUrl = $input.first().json.video_url;\nconst caption = $('Idea fields').first().json.caption || $('Idea fields').first().json.idea || '';\nconst scheduleAt = !CONFIG.PUBLISH_NOW && CONFIG.SCHEDULED_AT ? CONFIG.SCHEDULED_AT : null;\n\nreturn CONFIG.PLATFORMS.map((platform) => {\n  // The body of POST /v1/posts exactly as the CEKIVA API expects it.\n  const request = { platforms: [platform], content: caption, media_urls: [videoUrl], image_url: videoUrl,\n                    scheduled_for: scheduleAt || new Date().toISOString(), publish_now: !scheduleAt };\n  if (CONFIG.CLIENT_ID) request.client_id = CONFIG.CLIENT_ID;\n  if (CONFIG.AI_LABEL) request.ai_generated = true;\n  return { json: { platform, request } };\n});\n"
+      }
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-000000000009",
+      "name": "CEKIVA: POST /v1/posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4320,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://cekiva.com/api/v1/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-00000000000a",
+      "name": "Label CEKIVA results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4580,
+        200
+      ],
+      "parameters": {
+        "jsCode": "// One uniform result row per platform.\nconst sent = $('Build CEKIVA posts').all();\nreturn $input.all().map((item, i) => {\n  const r = item.json;\n  const platform = sent[i] ? sent[i].json.platform : 'unknown';\n  const body = r.body;\n  const post = Array.isArray(body) ? body[0] : null;\n  const err = body && !Array.isArray(body) && body.error && typeof body.error === 'object' ? body.error : null;\n  const status = Number(r.statusCode) || null;\n  const ok = status !== null && status >= 200 && status < 300 && !!post;\n  return { json: {\n    platform,\n    result: ok ? 'Success' : 'Error',\n    http_status: status,\n    post_id: post ? post.id : null,\n    post_status: post ? post.status : null,\n    credits_charged: post ? post.credits_charged : null,\n    error_code: err ? err.code : (r.error ? 'CEKIVA_UNREACHABLE' : null),\n    error_message: err ? err.message : (r.error ? String(r.error.message || r.error).slice(0, 200) : (ok ? null : 'Unexpected response')),\n    hint: err ? err.hint : null,\n  } };\n});\n"
+      }
+    },
+    {
+      "id": "c3a00000-0000-4000-8000-00000000000b",
+      "name": "CEKIVA setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2740,
+        -520
+      ],
+      "parameters": {
+        "content": "## 🚀 Setup: video AND publishing through CEKIVA\n\nBoth the video and the posts now come from the CEKIVA API: no fal.ai key, no Google key, no Blotato.\n\n**1 · CEKIVA credential (required)**\nCredentials → New → *Header Auth*\n• Name: `CEKIVA API key`\n• Header name: `Authorization`\n• Header value: `Bearer tplk_...` (create the key in CEKIVA under Settings → API keys)\nSelect it in the three CEKIVA nodes: **CEKIVA: start video**, **CEKIVA: video status**, **CEKIVA: POST /v1/posts**.\n\n**2 · OpenAI credential**\nThe two AI agents write the idea and the video prompt (GPT-4.1, unchanged from the original). Select your OpenAI credential in both LLM nodes.\n\n**3 · Options**\n• Video: the body of **CEKIVA: start video** (quality, length 4/6/8 s, 9:16 or 16:9).\n• Publishing: the top of **Build CEKIVA posts** (platforms, `CLIENT_ID`, publish now / schedule, the TikTok AI label).\n\n**Credits.** Generating the video and every post cost CEKIVA credits from your wallet; the price of each action is shown in CEKIVA (prices are set there, not in this workflow). A failed video is refunded by CEKIVA.\n\nVideo model: Gemini Omni 1.1 Flash, run by CEKIVA. Based on the community template \"Automate video creation with Veo3 and auto-post to Instagram, TikTok via Blotato\" (n8n.io).",
+        "height": 620,
+        "width": 1100,
+        "color": 5
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "connections": {
+    "Trigger: Run Daily Script Generator": {
+      "main": [
+        [
+          {
+            "node": "AI Agent: Generate Video Concept",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: Generate Video Concept": {
+      "main": [
+        [
+          {
+            "node": "Idea fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idea fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent: Create Video Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: Create Video Prompt": {
+      "main": [
+        [
+          {
+            "node": "CEKIVA: start video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEKIVA: start video": {
+      "main": [
+        [
+          {
+            "node": "Wait 30 s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30 s": {
+      "main": [
+        [
+          {
+            "node": "CEKIVA: video status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEKIVA: video status": {
+      "main": [
+        [
+          {
+            "node": "Evaluate video job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate video job": {
+      "main": [
+        [
+          {
+            "node": "Video ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video ready?": {
+      "main": [
+        [
+          {
+            "node": "Build CEKIVA posts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 30 s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Video failed or timed out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CEKIVA posts": {
+      "main": [
+        [
+          {
+            "node": "CEKIVA: POST /v1/posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEKIVA: POST /v1/posts": {
+      "main": [
+        [
+          {
+            "node": "Label CEKIVA results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Inject Creativity": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent: Generate Video Concept",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Build Prompt Structure": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent: Create Video Prompt",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser: Extract JSON from Idea": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent: Generate Video Concept",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Generate Idea & Caption (GPT-4.1)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent: Generate Video Concept",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Format Video Prompt (GPT-4.1)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent: Create Video Prompt",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
