@@ -24,6 +24,7 @@ X (Twitter) is not supported: CEKIVA retired that channel.
 | [04](workflows/04-wordpress-blog-to-social-cekiva) | **WordPress blog to social** | A webhook receives a WordPress post id; AI writes a version for Facebook, Instagram, LinkedIn, Threads and Bluesky; CEKIVA publishes each with the featured image and a link. X (Twitter) is not included. |
 | [05](workflows/05-clone-viral-tiktoks-ai-avatar-cekiva) | **Clone viral TikToks with AI avatars** | Send a TikTok link to your Telegram bot; AI analyses it, Perplexity suggests a fresh idea, an AI avatar speaks the new script, and CEKIVA uploads the video and publishes it to TikTok, Instagram, YouTube, Facebook, LinkedIn and Threads. X (Twitter) is not included. |
 | [06](workflows/06-gemini-ai-social-content-generator-cekiva) | **Form + Gemini AI social generator** | A form (title, keywords, optional link and image); Gemini writes a separate post for Facebook, Instagram, LinkedIn, Threads and Bluesky; CEKIVA publishes each. Written from scratch, MIT, password-protected form. X (Twitter) is not included. |
+| [07](workflows/07-publish-image-video-to-multiple-socials-cekiva) | **Publish an image or video to multiple networks** | A password-protected form: tick the networks, write a caption, upload an image or a video; CEKIVA hosts the file and publishes it to Facebook Page, Instagram, LinkedIn, Threads, Bluesky, TikTok and YouTube. No monthly plan. X (Twitter) is not included. |
 
 ## Quick start (every workflow)
 
@@ -66,4 +67,4 @@ Issues and pull requests are welcome: new workflows, fixes, better docs. Please 
 
 ## License
 
-[MIT](LICENSE). Workflows 01, 03, 04 and 05 are derived from community templates; see their READMEs for the credit and what that means.
+[MIT](LICENSE). Workflows 01, 03, 04, 05 and 07 are derived from community templates; see their READMEs for the credit and what that means.

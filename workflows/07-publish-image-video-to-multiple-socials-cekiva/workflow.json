@@ -1,0 +1,461 @@
+{
+  "name": "Publish Image or Video to Multiple Social Networks → CEKIVA (Facebook, Instagram, LinkedIn, Threads, Bluesky, TikTok, YouTube)",
+  "nodes": [
+    {
+      "id": "c7a00000-0000-4000-8000-000000000001",
+      "name": "Post details",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "c7a00000-0000-4000-8000-0000000000a1",
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "Post Publisher",
+        "formDescription": "Publish an image or a video to several social networks through CEKIVA.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Networks",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Facebook Page"
+                  },
+                  {
+                    "option": "Instagram"
+                  },
+                  {
+                    "option": "LinkedIn"
+                  },
+                  {
+                    "option": "Threads"
+                  },
+                  {
+                    "option": "Bluesky"
+                  },
+                  {
+                    "option": "TikTok (video only)"
+                  },
+                  {
+                    "option": "YouTube (video only)"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Caption",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Upload",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "requiredField": true,
+              "acceptFileTypes": ".jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.webm"
+            },
+            {
+              "fieldLabel": "Client workspace ID",
+              "placeholder": "optional: a CEKIVA client workspace id (GET /v1/clients); empty = your own workspace"
+            }
+          ]
+        },
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Form password"
+        }
+      }
+    },
+    {
+      "id": "c7a00000-0000-4000-8000-000000000002",
+      "name": "Prepare media",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Validates the form, works out whether the upload is an image or a video and names the file for CEKIVA.\nconst f = $json || {};\nconst input = $input.first();\nconst caption = String(f['Caption'] || '').trim();\nconst clientId = String(f['Client workspace ID'] || '').trim();\nconst picked = Array.isArray(f['Networks']) ? f['Networks'] : (f['Networks'] ? [f['Networks']] : []);\nif (!caption) throw new Error('Caption is required.');\nif (clientId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientId)) throw new Error('Client workspace ID must be a UUID (see GET https://cekiva.com/api/v1/clients).');\n\nconst NETWORKS = { 'Facebook Page': 'facebook_page', 'Instagram': 'instagram', 'LinkedIn': 'linkedin', 'Threads': 'threads', 'Bluesky': 'bluesky',\n                   'TikTok (video only)': 'tiktok', 'YouTube (video only)': 'youtube' }; // X/Twitter is not here: CEKIVA retired that channel\nconst platforms = [...new Set(picked.map((x) => NETWORKS[x]).filter(Boolean))];\nif (!platforms.length) throw new Error('Pick at least one network.');\n\nconst bin = input.binary && input.binary['Upload'];\nif (!bin) throw new Error('Please upload an image or a video.');\nconst mime = String(bin.mimeType || '').toLowerCase();\nconst EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm' };\nif (!EXT[mime]) throw new Error('Unsupported file type (' + (mime || 'unknown') + '). Use JPG, PNG, WebP, GIF, MP4, MOV or WebM.');\nconst kind = mime.startsWith('video/') ? 'video' : 'image';\n// CEKIVA reads the type from the file name (and TikTok only takes .mp4 / .mov / .webm): name the file explicitly.\nbin.fileName = 'upload.' + EXT[mime];\nbin.mimeType = mime;\n\nconst skipped = [];\nconst usable = platforms.filter((p) => {\n  if (kind === 'image' && (p === 'tiktok' || p === 'youtube')) { skipped.push({ platform: p, reason: p + ' needs a video, you uploaded an image' }); return false; }\n  return true;\n});\nif (!usable.length) throw new Error('Nothing to publish: ' + skipped.map((s) => s.reason).join('; '));\nreturn [{ json: { kind, caption, platforms: usable, skipped, clientId }, binary: { Upload: bin } }];\n"
+      }
+    },
+    {
+      "id": "c7a00000-0000-4000-8000-000000000003",
+      "name": "Image or video?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        520,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "k-image",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "k-video",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "video",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Video"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "c7a00000-0000-4000-8000-000000000004",
+      "name": "CEKIVA: upload image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        780,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://cekiva.com/api/v1/upload/image",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "sendBody": true,
+        "options": {
+          "timeout": 120000
+        },
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "Upload"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      }
+    },
+    {
+      "id": "c7a00000-0000-4000-8000-000000000005",
+      "name": "CEKIVA: upload video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        780,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://cekiva.com/api/v1/upload/video",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "sendBody": true,
+        "options": {
+          "timeout": 120000
+        },
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "Upload"
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      }
+    },
+    {
+      "id": "c7a00000-0000-4000-8000-000000000007",
+      "name": "Build CEKIVA posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// CEKIVA publishing: one POST /v1/posts per network with the uploaded media (hosted by CEKIVA).\n// X/Twitter is not here on purpose: CEKIVA retired that channel.\nconst CONFIG = {\n  PUBLISH_NOW: true,  // true = publish right away; false = publish at SCHEDULED_AT\n  SCHEDULED_AT: '',   // ISO 8601 with a time zone, e.g. 2026-12-01T09:00:00Z (used only when PUBLISH_NOW is false)\n};\nconst prep = $('Prepare media').first().json;\nconst up = $input.first().json || {};\nif (!up.url) throw new Error('CEKIVA did not return a media url.');\nconst scheduleAt = !CONFIG.PUBLISH_NOW && CONFIG.SCHEDULED_AT ? CONFIG.SCHEDULED_AT : null;\nconst items = prep.platforms.map((platform) => {\n  // The body of POST /v1/posts exactly as the CEKIVA API expects it.\n  const request = { platforms: [platform], content: prep.caption, image_url: up.url, media_urls: [up.url],\n                    scheduled_for: scheduleAt || new Date().toISOString(), publish_now: !scheduleAt };\n  if (prep.clientId) request.client_id = prep.clientId;\n  return { json: { platform, request } };\n});\nitems[0].json.skipped = prep.skipped; // carried to the summary\nreturn items;\n"
+      }
+    },
+    {
+      "id": "c7a00000-0000-4000-8000-000000000006",
+      "name": "CEKIVA: POST /v1/posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://cekiva.com/api/v1/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "sendBody": true,
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c7a00000-0000-4000-8000-000000000008",
+      "name": "Label CEKIVA results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// One uniform result row per network, and a short text summary for the form's ending page.\nconst sent = $('Build CEKIVA posts').all();\nconst skipped = (sent[0] && sent[0].json.skipped) || [];\nconst rows = $input.all().map((item, i) => {\n  const r = item.json;\n  const platform = sent[i] ? sent[i].json.platform : 'unknown';\n  const body = r.body;\n  const post = Array.isArray(body) ? body[0] : null;\n  const err = body && !Array.isArray(body) && body.error && typeof body.error === 'object' ? body.error : null;\n  const status = Number(r.statusCode) || null;\n  const ok = status !== null && status >= 200 && status < 300 && !!post;\n  return {\n    platform,\n    result: ok ? 'Success' : 'Error',\n    http_status: status,\n    post_id: post ? post.id : null,\n    post_status: post ? post.status : null,\n    credits_charged: post ? post.credits_charged : null,\n    error_code: err ? err.code : (r.error ? 'CEKIVA_UNREACHABLE' : null),\n    error_message: err ? err.message : (r.error ? String(r.error.message || r.error).slice(0, 200) : (ok ? null : 'Unexpected response')),\n    hint: err ? err.hint : null,\n  };\n});\nconst lines = rows.map((x) => (x.result === 'Success' ? '✅ ' + x.platform + ' (' + x.post_status + ')' : '❌ ' + x.platform + ': ' + (x.error_code || '') + ' ' + (x.error_message || '')));\nfor (const s of skipped) lines.push('⏭️ ' + s.platform + ' skipped: ' + s.reason);\nreturn [{ json: { rows, skipped, summary: lines.join('\\n') } }];\n"
+      }
+    },
+    {
+      "id": "c7a00000-0000-4000-8000-000000000009",
+      "name": "Show the result",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1820,
+        300
+      ],
+      "webhookId": "c7a00000-0000-4000-8000-0000000000a9",
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "CEKIVA publishing",
+        "completionMessage": "={{ $json.summary }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c7a00000-0000-4000-8000-00000000000a",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -460
+      ],
+      "parameters": {
+        "content": "## Publish an image or a video to several networks — through CEKIVA\n\nA form (networks, caption, an image or a video) and one CEKIVA request per network. No monthly plan: you pay CEKIVA credits per post. X (Twitter) is not included: CEKIVA retired that channel.\n\n**1 · Credentials (2)**\n• `CEKIVA API key` — Header Auth: header `Authorization`, value `Bearer tplk_...` (CEKIVA → Settings → API keys). Select it in the three CEKIVA nodes: **CEKIVA: upload image**, **CEKIVA: upload video**, **CEKIVA: POST /v1/posts**.\n• `Form password` — Basic Auth, so that not everyone with the form's URL can publish on your accounts and spend your credits. Select it in **Post details**.\n\n**2 · Media.** The uploaded file is sent to CEKIVA, which hosts it until the posts are published. Images: JPG, PNG, WebP, GIF (up to 8 MB). Videos: MP4, MOV, WebM (up to 300 MB; TikTok and YouTube need a video, and n8n's own upload limit may be lower: N8N_PAYLOAD_SIZE_MAX).\n\n**3 · Options** — top of **Build CEKIVA posts**: publish now / schedule.",
+        "height": 660,
+        "width": 700,
+        "color": 5
+      }
+    }
+  ],
+  "connections": {
+    "Post details": {
+      "main": [
+        [
+          {
+            "node": "Prepare media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare media": {
+      "main": [
+        [
+          {
+            "node": "Image or video?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image or video?": {
+      "main": [
+        [
+          {
+            "node": "CEKIVA: upload image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CEKIVA: upload video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEKIVA: upload image": {
+      "main": [
+        [
+          {
+            "node": "Build CEKIVA posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEKIVA: upload video": {
+      "main": [
+        [
+          {
+            "node": "Build CEKIVA posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CEKIVA posts": {
+      "main": [
+        [
+          {
+            "node": "CEKIVA: POST /v1/posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEKIVA: POST /v1/posts": {
+      "main": [
+        [
+          {
+            "node": "Label CEKIVA results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label CEKIVA results": {
+      "main": [
+        [
+          {
+            "node": "Show the result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
