@@ -1,69 +1,47 @@
-# 08 · Content calendar (Google Sheets) → AI copy → CEKIVA
+# 08 · Content Calendar (Google Sheets) → AI Copy → CEKIVA
 
-Keep your content plan in a Google Sheet. Every hour the workflow takes the rows marked **READY**, has **Gemini write a separate post for each network**, and **CEKIVA publishes or schedules them** on Facebook Page, Instagram, LinkedIn, Threads and Bluesky. The sheet row is updated with what happened (`PUBLISHED`, `QUEUED`, `PARTIAL` or `ERROR`).
+> Plan posts in a Google Sheet; every hour the READY rows get AI copy per network and CEKIVA publishes or schedules them, then the result is written back to the row.
 
-```
-Every hour / Run now → Get READY rows → Validate rows → Lock row (PROCESSING) → Gemini: write the copy → Build CEKIVA posts
-  → one POST /v1/posts per network → Collect results → Write result (back into the sheet)
-```
+---
 
-- **No Merge nodes, no Graph API tokens.** The usual way to post to several networks in n8n is a native node per network, an image step per network and a chain of Merge nodes to bring the results together (five of them in the community template this idea comes from). Facebook and Instagram nodes also depend on Meta access tokens that expire. Here there is one HTTP request per network to CEKIVA, which holds the connections and refreshes them for you.
-- **Scheduling is built in.** Put a future time in `Publish At` and CEKIVA schedules the post for that moment; leave it empty (or in the past) and it goes out now.
-- **Pay-as-you-go.** CEKIVA charges credits per post, with no monthly plan and no per-account fee; prices are shown in CEKIVA. The Gemini calls are billed by Google (small text requests).
-- **X (Twitter) is excluded on purpose.** CEKIVA retired that channel, so there is no X node, no X copy and no `twitter` platform. A row that asks for it is marked `ERROR` with the reason.
+## 1. Who is this workflow for?
+- **Target Audience:** Agencies and content teams that plan posts in a spreadsheet and want them published (or scheduled) automatically.
+- **Experience Level:** Intermediate n8n user (Google Sheets and a Gemini key).
 
-## About this template
+## 2. What problem does it solve?
+- **The Manual Pain:** A content calendar in a sheet still means someone copies each row into every network by hand. Automating it with native nodes brings a chain of Merge nodes and Graph API tokens that expire, and a row that fails half way is easy to publish twice.
+- **The Automated Solution:** Rows marked `READY` are locked as `PROCESSING` before anything is sent, so a row can never go out twice; Gemini writes per-network copy; **one `POST /v1/posts` per network** publishes or schedules it (`Publish At`). The row ends as `PUBLISHED`, `QUEUED`, `PARTIAL` or `ERROR`, with the reason written back.
 
-Written from scratch and released under the repository's [MIT licence](../../LICENSE). The idea and the overall shape (a scheduled run that turns calendar rows into per-network posts) follow the community template [n8n.io/workflows/4637](https://n8n.io/workflows/4637). The copy of that template we worked from carried only its node names and connections, without its prompts or settings, so every prompt, setting and line of code here is new, and it uses Google Sheets for the calendar (the community template used Notion for its brand brief).
+## 3. What do you need? (Prerequisites)
+- **Core Platform:** n8n instance (self-hosted or Cloud)
+- **Distribution API:** CEKIVA account and API key (`Authorization: Bearer <API_KEY>`, created under *Settings → API keys*). Connect your social accounts once in CEKIVA.
+- **External Services & Credentials:** Google account (Sheets OAuth2) and a calendar sheet with the documented columns; Google Gemini API key (Google AI Studio).
+- **Setup guide:** the sheet columns, statuses and options are in [SETUP.md](SETUP.md).
+- **Technical Skills:** Basic understanding of importing n8n JSON and setting up credentials.
 
-## Set it up
+## 4. Free vs. Paid Components
 
-1. **CEKIVA.** Connect your networks and create an API key (*Settings → API keys*, starts with `tplk_`).
-2. **Three credentials in n8n** (*Credentials → Create*):
+| Component | Cost Model | Details |
+| :--- | :--- | :--- |
+| **Workflow File (.json)** | **100% Free** | Open-source under the MIT License. |
+| **n8n Engine** | **Free / Variable** | Free if self-hosted (Community edition); paid if you use n8n Cloud. |
+| **CEKIVA Account & API Access** | **€0 / Free** | €0 account fee, €0 API access fee: no monthly subscription, no per-account fee, no developer-tier lock. |
+| **Social Publishing** | **Pay-as-you-go** | Credits are consumed only for what you publish (one dispatch per network and row). The price per post is shown in CEKIVA and set there; this README quotes no figure because it can change. |
+| **AI Generation Engine** | **Variable** | Google Gemini tokens (`gemini-2.5-flash` by default), at most three rows per run by default. Check Google's current terms for free-tier limits. |
+| **Third-Party Services** | **Free / Variable** | Google Sheets is free with a Google account. No image host is needed (the `Image URL` column goes straight to CEKIVA). |
 
-   | Credential name | Type | Value |
-   |---|---|---|
-   | `Google Sheets` | Google Sheets OAuth2 | your Google account |
-   | `Gemini API key` | Header Auth | header `x-goog-api-key`, value = your key from [Google AI Studio](https://aistudio.google.com/apikey) |
-   | `CEKIVA API key` | Header Auth | header `Authorization`, value `Bearer tplk_...` |
+*X (Twitter) is not supported: CEKIVA retired that channel.*
 
-3. **The calendar.** Create a Google Sheet; the **first tab**, first row, holds exactly these headers:
+## 5. What you'll get (End-to-End Delivery)
+- **Input Data:** A calendar row with `Status = READY`, a `Topic`, and optionally `Brief`, `Link`, `Image URL`, `Publish At`, `Client ID` and `Platforms`.
+- **Automated Processing:** Validates each row, locks it, asks Gemini for per-network copy, builds the requests, dispatches them, and writes the outcome back.
+- **Final Output:** Live or scheduled posts on the chosen networks and an updated row (`Status`, `Result`, `Post IDs`, `Updated`).
+- **Your Remaining Task:** Write the rows and set `READY`; fix any `ERROR` or `PARTIAL` rows by hand.
 
-   | Column | You fill it? | Meaning |
-   |---|---|---|
-   | `Status` | yes | Set to `READY` when the row should go out. The workflow only touches `READY` rows. |
-   | `Topic` | yes | What the post is about (required). |
-   | `Brief` | no | Extra detail for the AI: key points, offer, tone. |
-   | `Link` | no | A page to send readers to. Added to the copy where it fits (not on Instagram). |
-   | `Image URL` | no | A **public** image link. **Instagram needs it**: without one, Instagram is skipped for that row. |
-   | `Publish At` | no | ISO 8601 **with a time zone**, e.g. `2026-12-01T09:00:00Z`. Future = scheduled (`QUEUED`); empty or past = publish now. |
-   | `Client ID` | no | A CEKIVA client workspace (UUID from `GET https://cekiva.com/api/v1/clients`). Empty = your own workspace. |
-   | `Platforms` | no | Comma list of `facebook_page`, `instagram`, `linkedin`, `threads`, `bluesky` (`facebook` and `ig` work too). Empty = all five. |
-   | `Result`, `Post IDs`, `Updated` | filled by the workflow | What happened, the CEKIVA post ids, and when. |
-
-4. Import `workflow.json`. In **Get READY rows**, **Lock row** and **Write result** select the `Google Sheets` credential and your document (replace `REPLACE_WITH_YOUR_SHEET_ID`; it is the long id in the sheet's URL). Select `Gemini API key` in **Gemini: write the copy** and `CEKIVA API key` in **CEKIVA: POST /v1/posts**.
-5. Add a row with `Status = READY`, run **Run now (test)** once, and check the sheet. Then **activate** the workflow.
-
-## What the statuses mean
-
-| Status | Meaning |
-|---|---|
-| `READY` | You set it. Waiting for the next run. |
-| `PROCESSING` | The workflow took the row. It is set **before anything is sent**, so a row can never be sent twice, even if the run stops half way. A row stuck here was interrupted: check CEKIVA, then set it back to `READY` if nothing went out. |
-| `PUBLISHED` | CEKIVA accepted every network and is publishing now. |
-| `QUEUED` | CEKIVA accepted every network for the `Publish At` time. |
-| `PARTIAL` | Some networks were accepted, some were not (see `Result`). The accepted ones are **not** repeated; fix the failed ones by hand or in a new row. |
-| `ERROR` | Nothing was sent: an invalid row (the reason is in `Result`), a Gemini problem, or every network was refused (for example no credits). |
-
-`PUBLISHED` means CEKIVA took the post; a network can still refuse it a moment later. CEKIVA shows the final state of each post.
-
-## Options
-
-At the top of **Validate rows**: `MAX_ROWS_PER_RUN` (default 3, a cap on the credits and AI calls one run can spend; further READY rows wait for the next run), `MODEL` (`gemini-2.5-flash`; change it if Google retires it), `LANGUAGE` and `BRAND_VOICE`. The prompt itself is in the same node. The run interval is in **Every hour**.
-
-## Good to know
-
-- One network failing never stops the others: each network is its own request.
-- Posting costs credits from the CEKIVA wallet of the workspace owner; if the wallet runs out, the row becomes `ERROR` or `PARTIAL` with the `INSUFFICIENT_CREDITS` code.
-- The AI is told not to invent facts, but read what it writes: you are responsible for what you publish. Use `Publish At` in the future to get time to review (and delete a queued post in CEKIVA).
-- A row you set back to `READY` after it was published is published again: the API has no idempotency key.
+## 6. A Real-World Example
+- **Step 1: Input:**  
+  Sheet row: `Status=READY · Topic=Black Friday preview · Brief=early access for subscribers · Link=https://shop.example/bf · Image URL=https://shop.example/bf.jpg · Publish At=2026-11-27T08:00:00Z · Platforms=facebook,instagram,linkedin`
+- **Step 2: Processing:**  
+  The hourly run takes the row, sets it to `PROCESSING`, Gemini writes three versions, and three requests are sent with `scheduled_for: 2026-11-27T08:00:00Z` and `publish_now: false`.
+- **Step 3: Delivered Result:**  
+  CEKIVA queues three posts for 08:00 UTC on 27 November; the row becomes `QUEUED` with `Result = OK: facebook_page, instagram, linkedin` and the three post ids. If LinkedIn had been refused, the row would read `PARTIAL` and list the failure.

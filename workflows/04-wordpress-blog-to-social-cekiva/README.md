@@ -1,83 +1,47 @@
-# 04 · WordPress blog to social, through CEKIVA
+# 04 · WordPress Blog to Social → CEKIVA
 
-Publish a WordPress post, and an AI writes a separate version of it for **Facebook, Instagram, LinkedIn, Threads and Bluesky**; CEKIVA publishes each one with the post's featured image and a link back to the article.
+> Publish a WordPress post and an AI writes a version of it for Facebook, Instagram, LinkedIn, Threads and Bluesky; CEKIVA publishes each with the featured image and a link back.
 
-```
-WordPress webhook (or manual test) → Post ID → Get Post → Featured image → AI writes 5 versions → one POST /v1/posts per network → results
-```
+---
 
-> **X (Twitter) is excluded on purpose.** CEKIVA retired that channel, so the workflow has no X node, no X copy and no `twitter` platform.
+## 1. Who is this workflow for?
+- **Target Audience:** WordPress site owners, bloggers and content marketers who promote every article on social media.
+- **Experience Level:** Beginner to intermediate (a webhook from WordPress and three credentials).
 
-## What changed from the community template
+## 2. What problem does it solve?
+- **The Manual Pain:** After every article someone copies the headline into five networks, rewrites it to fit each one, attaches the image and pastes the link. Automating it with native nodes brings Meta and LinkedIn tokens that expire and a Merge node per branch.
+- **The Automated Solution:** A protected webhook receives the post id, the workflow reads the article, Gemini writes five versions, and **one `POST /v1/posts` per network** publishes them with the featured image. A failing network never stops the others.
 
-Derived from the community template *AI Social Media Publisher from WordPress* ([n8n.io/workflows/3086](https://n8n.io/workflows/3086); see the original page for its author and terms). Original: 20 nodes, this one: 16.
+## 3. What do you need? (Prerequisites)
+- **Core Platform:** n8n instance (self-hosted or Cloud)
+- **Distribution API:** CEKIVA account and API key (`Authorization: Bearer <API_KEY>`, created under *Settings → API keys*). Connect your social accounts once in CEKIVA.
+- **External Services & Credentials:** WordPress site with an application password (to read the post); OpenRouter API key (the AI model); A way to call a webhook when a post is published (a webhook plugin, or a few lines of code on the `publish_post` hook).
+- **Setup guide:** credentials, the webhook call and client routing are in [SETUP.md](SETUP.md).
+- **Technical Skills:** Basic understanding of importing n8n JSON and setting up credentials.
 
-| Original | Now |
-|---|---|
-| Started by hand; the post id came from a Google Sheet | **A protected webhook** receives the WordPress post id (a manual test trigger is kept). No Google Sheets, no sheet to clone |
-| Native X, Facebook, LinkedIn nodes and a two-step Instagram container call, each with its own app and credential | one `POST /v1/posts` per network through CEKIVA; you connect the accounts once in CEKIVA |
-| AI-generated images (OpenAI, billed to you, temporary URLs) | the **post's featured image** (free, public URL); no OpenAI image cost |
-| Copy for LinkedIn, Instagram, Facebook and X | copy for Facebook, Instagram, LinkedIn, **Threads and Bluesky**, with their length limits in the prompt |
-| Free experimental Gemini 2.0 model on OpenRouter (no longer in OpenRouter's catalogue) | `google/gemini-3.5-flash` (change it in *OpenRouter Chat Model* if you prefer another) |
-| A prompt that named another company's website and products | a generic prompt |
+## 4. Free vs. Paid Components
 
-## Set it up
+| Component | Cost Model | Details |
+| :--- | :--- | :--- |
+| **Workflow File (.json)** | **100% Free** | Open-source under the MIT License. |
+| **n8n Engine** | **Free / Variable** | Free if self-hosted (Community edition); paid if you use n8n Cloud. |
+| **CEKIVA Account & API Access** | **€0 / Free** | €0 account fee, €0 API access fee: no monthly subscription, no per-account fee, no developer-tier lock. |
+| **Social Publishing** | **Pay-as-you-go** | Credits are consumed only for what you publish (one dispatch per network). The price per post is shown in CEKIVA and set there; this README quotes no figure because it can change. |
+| **AI Generation Engine** | **Variable** | OpenRouter model tokens (`google/gemini-3.5-flash` by default), billed by OpenRouter at its rates. |
+| **Third-Party Services** | **Free / Variable** | None. The featured image comes from your own WordPress site; no image host is needed. |
 
-1. **CEKIVA:** connect your Facebook Page, Instagram, LinkedIn, Threads and Bluesky, and create an API key (*Settings → API keys*, starts with `tplk_`).
-2. **n8n credentials** (*Credentials → Create → Header Auth*), two of them:
+*X (Twitter) is not supported: CEKIVA retired that channel.*
 
-   | Credential name | Header name | Header value |
-   |---|---|---|
-   | `CEKIVA API key` | `Authorization` | `Bearer tplk_...` |
-   | `CEKIVA webhook secret` | `X-Webhook-Secret` | a long random string |
+## 5. What you'll get (End-to-End Delivery)
+- **Input Data:** A WordPress post id sent to the webhook, for example `{"post_id": 4821}` (optionally a CEKIVA `client_id`).
+- **Automated Processing:** Reads the post (title, content, link, featured image), AI writes the copy for five networks within their length limits, appends the link where it fits, and dispatches.
+- **Final Output:** Up to five live posts with the featured image; If the post has no featured image, Instagram returns a clear `IMAGE_REQUIRED` row and the other networks still post.
+- **Your Remaining Task:** Publish the article in WordPress. Optionally review the first runs' wording.
 
-   Plus your **WordPress** credential (an application password, *Users → Profile → Application Passwords*) and your **OpenRouter** credential.
-3. Import `workflow.json` and select the credentials: `CEKIVA API key` in **CEKIVA: POST /v1/posts**, `CEKIVA webhook secret` in **WordPress webhook**, WordPress in **Get Post**, OpenRouter in **OpenRouter Chat Model**.
-4. **Activate** the workflow and copy the production URL of **WordPress webhook** (path `cekiva-wordpress`).
-
-> The webhook is protected by the secret on purpose: an open webhook would let anyone spend your credits.
-
-## WordPress webhook intake
-
-When a post is published, WordPress must send a `POST` with the secret header and the post id:
-
-```bash
-curl -X POST https://YOUR-N8N/webhook/cekiva-wordpress \
-  -H "X-Webhook-Secret: YOUR_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"post_id": 123}'
-```
-
-WordPress does not do this by itself. Use a webhook plugin that can set a custom header and a JSON body (for example *WP Webhooks* or *Uncanny Automator*), triggered on "post published", or a few lines in a small plugin that call `wp_remote_post()` on the `publish_post` hook. The body only needs the id; `post_id`, `ID` and `post.ID` are all understood. The webhook answers at once, so WordPress is never kept waiting for the AI.
-
-**Manual test:** open the workflow, type a real post id into **Test Post ID** (`"post_id": "123"`) and run **When clicking 'Test workflow'**.
-
-## Client workspace routing
-
-By default the posts go to your primary CEKIVA workspace. To publish into a client's workspace:
-
-- send `"client_id": "<id>"` in the webhook body (one WordPress site per client, say), or
-- set `CLIENT_ID` at the top of **Build CEKIVA posts** for every run.
-
-The ids are listed by `GET https://cekiva.com/api/v1/clients` (each client workspace is a client). The webhook value wins over `CLIENT_ID`. An id that is not yours comes back as an error row, nothing is posted elsewhere.
-
-## Options
-
-At the top of **Build CEKIVA posts**: `PUBLISH_NOW` / `SCHEDULED_AT` (ISO 8601 with a time zone) and `APPEND_LINK`. The article's link is added to the copy for Facebook, LinkedIn, Threads and Bluesky when it still fits the length limit (Threads 500, Bluesky 300); Instagram captions do not make links clickable, so none is added there.
-
-## Output
-
-One row per network from **Label CEKIVA results**:
-
-```json
-{ "platform": "linkedin", "result": "Success", "http_status": 201, "post_id": "…", "post_status": "scheduled", "credits_charged": 0, "error_code": null, "error_message": null, "hint": null }
-```
-
-or `"result": "Error"` with CEKIVA's `error_code`, `error_message` and `hint`. Branch on the code, not on the text.
-
-## Good to know
-
-- **Instagram needs an image.** A post without a featured image gets an `IMAGE_REQUIRED` row for Instagram; the other networks still post.
-- **Credits.** Every post costs credits from the CEKIVA wallet of the workspace owner; the price is shown in CEKIVA and set there, not in this workflow. AI text through OpenRouter is billed by OpenRouter.
-- A repeated webhook call publishes the post again: the API has no idempotency key, so make your WordPress trigger fire once per post.
-- Only the featured image is used. Images inside the article body are not picked up.
+## 6. A Real-World Example
+- **Step 1: Input:**  
+  WordPress fires `POST /webhook/cekiva-wordpress` with `{"post_id": 4821}` for the article *Five spring pruning mistakes*.
+- **Step 2: Processing:**  
+  **Get Post** loads article 4821, **Featured image** fetches its image URL, the AI chain returns five platform versions, and **Build CEKIVA posts** creates five requests (`facebook_page`, `instagram`, `linkedin`, `threads`, `bluesky`) with `publish_now: true`.
+- **Step 3: Delivered Result:**  
+  Five posts go live, each with the article's image and, where the length limit allows, a link to the article; the Bluesky and Threads versions are short, the LinkedIn one longer. The result rows show `Success` per network. *(Illustrative wording.)*

@@ -36,7 +36,7 @@ X (Twitter) is not supported: CEKIVA retired that channel.
    - **Name:** `CEKIVA API key`
    - **Header name:** `Authorization`
    - **Header value:** `Bearer tplk_...` (your key)
-4. **Import** the workflow's `workflow.json` (*Workflows → Import from file*), select the credential in the CEKIVA node(s), and follow that workflow's README.
+4. **Import** the workflow's `workflow.json` (*Workflows → Import from file*), select the credential in the CEKIVA node(s), and follow that workflow's `SETUP.md` (each workflow's `README.md` explains who it is for, what it costs and shows an example).
 
 > Keep the key secret and limit the credential to `cekiva.com` (*Allowed domains*) if your n8n offers it.
 

@@ -1,69 +1,47 @@
-# 06 · Form + Gemini AI social generator → CEKIVA
+# 06 · Form + Gemini AI Social Generator → CEKIVA
 
-Fill in a short form (title, keywords, an optional link and image). **Google Gemini writes a separate post for Facebook, Instagram, LinkedIn, Threads and Bluesky**, and **CEKIVA publishes each one**. Seven nodes, three credentials, nothing else to host.
+> Fill in a short form and Gemini writes a separate post for Facebook, Instagram, LinkedIn, Threads and Bluesky; CEKIVA publishes each. Seven nodes, three credentials, MIT.
 
-```
-Form → Prepare Gemini request → Gemini: write the copy → Build CEKIVA posts → one POST /v1/posts per network → Show the result (on the form's ending page)
-```
+---
 
-**Free and open source.** This workflow is written from scratch and released under the repository's [MIT licence](../../LICENSE): use it, change it, sell your own version. It is not derived from anyone else's template.
+## 1. Who is this workflow for?
+- **Target Audience:** Solo creators, small businesses and anyone who wants AI-written posts from a simple form.
+- **Experience Level:** Beginner friendly.
 
-- **No per-account surcharge.** Connect as many profiles as you like in CEKIVA; you pay credits per post, with no plan and no monthly fee. Prices are shown in CEKIVA.
-- **No image host.** Give the form a public image link; CEKIVA fetches it itself. No ImgBB, Cloudinary or upload step.
-- **No X (Twitter).** CEKIVA retired that channel, so there is no X node, no X copy and no `twitter` platform.
+## 2. What problem does it solve?
+- **The Manual Pain:** Writing five versions of one announcement by hand takes time, and the usual no-code answer is a paid template plus a per-network node chain with expiring Meta and LinkedIn tokens and an image-host step.
+- **The Automated Solution:** A password-protected form, one Gemini call that returns structured JSON, and **one `POST /v1/posts` per network**. No image host is needed (CEKIVA fetches your image link itself) and one failing network never stops the others.
 
-## Set it up
+## 3. What do you need? (Prerequisites)
+- **Core Platform:** n8n instance (self-hosted or Cloud)
+- **Distribution API:** CEKIVA account and API key (`Authorization: Bearer <API_KEY>`, created under *Settings → API keys*). Connect your social accounts once in CEKIVA.
+- **External Services & Credentials:** Google Gemini API key (Google AI Studio); A form password of your choice (Basic Auth on the form).
+- **Setup guide:** the form fields, options and credentials are in [SETUP.md](SETUP.md).
+- **Technical Skills:** Basic understanding of importing n8n JSON and setting up credentials.
 
-1. **CEKIVA.** Connect your Facebook Page, Instagram, LinkedIn, Threads and Bluesky accounts, then create an API key (*Settings → API keys*, starts with `tplk_`).
-2. **Three credentials in n8n** (*Credentials → Create*):
+## 4. Free vs. Paid Components
 
-   | Credential name | Type | Value |
-   |---|---|---|
-   | `CEKIVA API key` | Header Auth | header `Authorization`, value `Bearer tplk_...` |
-   | `Gemini API key` | Header Auth | header `x-goog-api-key`, value = your key from [Google AI Studio](https://aistudio.google.com/apikey) |
-   | `Form password` | Basic Auth | a user name and a password of your choice |
+| Component | Cost Model | Details |
+| :--- | :--- | :--- |
+| **Workflow File (.json)** | **100% Free** | Open-source under the MIT License. |
+| **n8n Engine** | **Free / Variable** | Free if self-hosted (Community edition); paid if you use n8n Cloud. |
+| **CEKIVA Account & API Access** | **€0 / Free** | €0 account fee, €0 API access fee: no monthly subscription, no per-account fee, no developer-tier lock. |
+| **Social Publishing** | **Pay-as-you-go** | Credits are consumed only for what you publish (one dispatch per network). The price per post is shown in CEKIVA and set there; this README quotes no figure because it can change. |
+| **AI Generation Engine** | **Variable** | Google Gemini tokens (`gemini-2.5-flash` by default; change it in the first Code node). A post uses a very small request; check Google's current terms for free-tier limits. |
+| **Third-Party Services** | **Free / Variable** | None. No image host or other service is required. |
 
-3. Import `workflow.json` and select the credentials: `Form password` in **Post details**, `Gemini API key` in **Gemini: write the copy**, `CEKIVA API key` in **CEKIVA: POST /v1/posts**.
-4. **Activate** the workflow and open the production URL of **Post details** (the form). Your browser asks for the form password.
+*X (Twitter) is not supported: CEKIVA retired that channel.*
 
-> The form is protected by a password on purpose: without it, anyone who finds the URL could publish on your accounts and spend your credits.
+## 5. What you'll get (End-to-End Delivery)
+- **Input Data:** A form with *Post Title*, *Keywords / Topic*, and optionally a *Link*, a public *Image URL* and a *Client workspace ID*.
+- **Automated Processing:** Validates the form, asks Gemini for per-network copy within each network's limit, appends the link where it fits, and dispatches one request per network.
+- **Final Output:** Up to five live posts and a result page listing every network (✅, ❌ with the CEKIVA error code, ⏭️ skipped).
+- **Your Remaining Task:** Fill in the form and read the result page. Instagram needs an image URL, otherwise it is skipped.
 
-## The form
-
-| Field | Required | Meaning |
-|---|---|---|
-| Post Title | yes | What the post is about, in a few words. |
-| Keywords / Topic | yes | Keywords or a one-line brief for Gemini. |
-| Link | no | A page to send readers to (`http(s)://...`). Added to the copy where it fits the network's length limit; Instagram captions do not make links clickable, so none is added there. |
-| Image URL | no | A **public** image link. **Instagram needs it**: without it Instagram is skipped (and the result page says so); the other networks post as text. |
-| Client workspace ID | no | The id of one of your CEKIVA client workspaces (a UUID, listed by `GET https://cekiva.com/api/v1/clients`). Empty = your own workspace. |
-
-## Options
-
-At the top of **Prepare Gemini request**:
-
-- `MODEL`: `gemini-2.5-flash` by default. Any Gemini text model that supports `generateContent` works; Google retires old models from time to time, so change it here if it ever stops answering.
-- `LANGUAGE` and `BRAND_VOICE`: the language of the posts and your voice in one line.
-
-At the top of **Build CEKIVA posts**: `PUBLISH_NOW` / `SCHEDULED_AT` (ISO 8601 with a time zone) and `APPEND_LINK`.
-
-## Output
-
-The form's ending page lists what happened:
-
-```
-✅ facebook_page (scheduled)
-✅ linkedin (scheduled)
-❌ threads: INSUFFICIENT_CREDITS …
-⏭️ instagram skipped: Instagram needs an image: fill in Image URL
-```
-
-The full rows (`platform`, `result`, `post_id`, `post_status`, `credits_charged`, `error_code`, `error_message`, `hint`) are the output of **Label CEKIVA results**. One network failing never stops the others: each network is its own request. Branch on `error_code`, not on the text.
-
-## Good to know
-
-- **It publishes right away** (`publish_now`). Set `PUBLISH_NOW` to `false` and a `SCHEDULED_AT` time if you want a window to review.
-- Gemini writes from your title, keywords and link only. It is told not to invent facts, but read the result: you are responsible for what you publish.
-- The Gemini call is billed by Google (it is a very small text request); posting is billed in CEKIVA credits.
-- A repeated form submission posts again: the API has no idempotency key.
-- The prompt is in **Prepare Gemini request**, where you can adapt the rules per network.
+## 6. A Real-World Example
+- **Step 1: Input:**  
+  *Post Title:* `Our spring collection is live` · *Keywords / Topic:* `spring, new arrivals, free shipping` · *Link:* `https://shop.example/spring` · *Image URL:* `https://shop.example/img/spring.jpg`
+- **Step 2: Processing:**  
+  **Prepare Gemini request** builds the prompt, **Gemini: write the copy** returns JSON for the five networks, **Build CEKIVA posts** shortens and links them, and five `POST /v1/posts` requests go out with `publish_now: true`.
+- **Step 3: Delivered Result:**  
+  Five posts go live: a warm two-sentence Facebook post, an Instagram caption with emoji and hashtags over the image, a professional LinkedIn paragraph, and short Threads and Bluesky posts (Bluesky stays under 300 characters). The result page shows `✅ facebook_page … ✅ bluesky`. *(Illustrative; Gemini writes new text on every run.)*

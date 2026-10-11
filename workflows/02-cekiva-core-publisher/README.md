@@ -1,71 +1,47 @@
-# 02 · CEKIVA core publisher
+# 02 · CEKIVA Core Publisher
 
-A small, production-minded n8n workflow: **webhook in, posts out.** It validates the payload, publishes it through the [CEKIVA](https://cekiva.com/?utm_source=github&utm_medium=template_repo&utm_campaign=n8n_starter) API and answers with a uniform result. Put any trigger in front of it (a form, a schedule, a Google Sheet, another workflow, an AI agent).
+> A protected webhook that validates a post and publishes it through CEKIVA, answering with a clean `SUCCESS` or a structured `ERROR`. Put any trigger in front of it.
 
-```
-Webhook → Config → Validate & Prepare → (workspace lookup) → POST /v1/posts → Format Result → Respond
-```
+---
 
-## Set it up
+## 1. Who is this workflow for?
+- **Target Audience:** Developers, technical marketers and agencies that want one publishing endpoint behind forms, sheets, schedulers, other workflows or AI agents.
+- **Experience Level:** Beginner friendly (two credentials, no AI).
 
-1. **Credentials** (*Credentials → Create → Header Auth*), two of them:
+## 2. What problem does it solve?
+- **The Manual Pain:** Every automation ends up re-implementing the same publishing logic: per-network nodes, expiring Meta tokens, per-account fees, and a different error shape for each service. Ten automations mean ten copies to maintain.
+- **The Automated Solution:** One workflow that every other automation calls with a JSON body. It validates the input, resolves the client workspace, makes **one `POST /v1/posts`** to CEKIVA and returns a uniform answer, with the CEKIVA `error.code` and `hint` passed through on failure.
 
-   | Credential name | Header name | Header value |
-   |---|---|---|
-   | `CEKIVA API key` | `Authorization` | `Bearer tplk_...` (create the key in CEKIVA under *Settings → API keys*) |
-   | `CEKIVA webhook secret` | `X-Webhook-Secret` | a long random string; every caller must send it |
+## 3. What do you need? (Prerequisites)
+- **Core Platform:** n8n instance (self-hosted or Cloud)
+- **Distribution API:** CEKIVA account and API key (`Authorization: Bearer <API_KEY>`, created under *Settings → API keys*). Connect your social accounts once in CEKIVA.
+- **External Services & Credentials:** A random secret for the webhook (`X-Webhook-Secret`), created by you.
+- **Setup guide:** credentials, the call format and the answers are in [SETUP.md](SETUP.md).
+- **Technical Skills:** Basic understanding of importing n8n JSON and setting up credentials.
 
-2. Import `workflow.json`. Open the nodes that show a red credential warning (*Webhook*, *Resolve workspace*, *Dispatch: POST /posts*) and select the credentials.
-3. In the **Config** node, `cekiva_base_url` defaults to `https://cekiva.com/api/v1`. Leave it.
-4. **Activate** the workflow.
+## 4. Free vs. Paid Components
 
-> The webhook is protected by the secret on purpose: an open webhook would let anyone spend your credits.
+| Component | Cost Model | Details |
+| :--- | :--- | :--- |
+| **Workflow File (.json)** | **100% Free** | Open-source under the MIT License. |
+| **n8n Engine** | **Free / Variable** | Free if self-hosted (Community edition); paid if you use n8n Cloud. |
+| **CEKIVA Account & API Access** | **€0 / Free** | €0 account fee, €0 API access fee: no monthly subscription, no per-account fee, no developer-tier lock. |
+| **Social Publishing** | **Pay-as-you-go** | Credits are consumed only for what you publish (one dispatch per network in the request). The price per post is shown in CEKIVA and set there; this README quotes no figure because it can change. |
+| **AI Generation Engine** | **Variable** | None. This workflow uses no AI. |
+| **Third-Party Services** | **Free / Variable** | None. No image host or other service is needed. |
 
-## Call it
+*X (Twitter) is not supported: CEKIVA retired that channel.*
 
-```bash
-curl -X POST https://YOUR-N8N/webhook/cekiva-publish \
-  -H "X-Webhook-Secret: YOUR_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "text": "Our spring collection is live!",
-    "platforms": ["linkedin", "instagram"],
-    "media_urls": ["https://example.com/spring.jpg"],
-    "scheduled_at": "2027-03-01T09:00:00Z"
-  }'
-```
+## 5. What you'll get (End-to-End Delivery)
+- **Input Data:** A JSON body: `text`, `platforms`, optional `media_urls`, `workspace_id` and `scheduled_at`.
+- **Automated Processing:** Header-secret check, validation of platforms and media, optional client-workspace lookup, scheduling, and the CEKIVA dispatch.
+- **Final Output:** A JSON answer: `status: SUCCESS` with the created post ids and credits charged, or `status: ERROR` with `kind`, `message` and `hint`.
+- **Your Remaining Task:** Choose what to send and decide what your calling system does with a failure.
 
-## Inputs
-
-| Field | Required | Meaning |
-|---|---|---|
-| `text` | yes (may be empty only when `media_urls` is given) | The post text. |
-| `platforms` | yes | Array or comma-separated string of `linkedin`, `tiktok`, `youtube`, `pinterest`, `bluesky`, `discord`, `facebook_page`, `instagram`, `threads`, `facebook_reels`. `facebook` is accepted for `facebook_page`. X (Twitter) is rejected: CEKIVA retired it. |
-| `media_urls` | no | Public `http(s)` image or video URLs. One URL is sent as `image_url`, several as a carousel. |
-| `workspace_id` | no | UUID of one of your client workspaces (listed by `GET /v1/clients`). Omit it to use your primary workspace. |
-| `scheduled_at` | no | ISO 8601 timestamp **with a time zone**, in the future. Omit it to publish right away. |
-| `require_approval` | no | `true` to hold the post until your client approves it on their approval link. |
-| `ai_generated` | no | `true` sets TikTok's "AI-generated" label. It is never set automatically: it is always your call. |
-
-## Answers
-
-Success (HTTP 200):
-
-```json
-{ "status": "SUCCESS", "post_ids": ["…"], "posts": [{ "id": "…", "platform": "linkedin", "status": "scheduled", "scheduled_for": "…", "credits_charged": 10 }], "total_credits_charged": 10, "workspace": null }
-```
-
-Error (HTTP 4xx/5xx):
-
-```json
-{ "status": "ERROR", "http_status": 402, "error": { "kind": "INSUFFICIENT_CREDITS", "code": "INSUFFICIENT_CREDITS", "stage": "dispatch", "upstream_status": 402, "message": "Not enough credits! …", "hint": "Top up the credits of the account that pays for this workspace …" } }
-```
-
-`kind` is the coarse class (`VALIDATION`, `AUTH`, `INSUFFICIENT_CREDITS`, `FORBIDDEN`, `NOT_FOUND`, `TRIAL_LIMIT`, `SERVER_ERROR`, `NETWORK`); `code` is CEKIVA's specific error code. Both are stable `UPPERCASE` identifiers. `message` and `hint` are English text from CEKIVA.
-
-## Notes
-
-- A repeated call creates a second post (no idempotency key).
-- Instagram and Pinterest need an image, TikTok and YouTube a video; CEKIVA answers `IMAGE_REQUIRED` / `VIDEO_REQUIRED` otherwise.
-- Posting costs credits when it is scheduled; the workspace owner pays. See [cekiva.com](https://cekiva.com/?utm_source=github&utm_medium=template_repo&utm_campaign=n8n_starter) for current prices.
-- To use another trigger (Google Sheets, a schedule, another workflow), replace the *Webhook* node: *Validate & Prepare* also reads the same fields straight from the incoming items.
+## 6. A Real-World Example
+- **Step 1: Input:**  
+  `curl -X POST https://YOUR-N8N/webhook/cekiva-publish -H "X-Webhook-Secret: …" -H "Content-Type: application/json" -d '{"text":"Our spring collection is live!","platforms":["linkedin","instagram"],"media_urls":["https://example.com/spring.jpg"],"scheduled_at":"2027-03-01T09:00:00Z"}'`
+- **Step 2: Processing:**  
+  The webhook checks the secret, the Code node validates the platforms (X/Twitter is refused: CEKIVA retired it) and the media, then **CEKIVA: POST /v1/posts** schedules one post per network for 09:00 UTC on 1 March 2027.
+- **Step 3: Delivered Result:**  
+  Both posts are scheduled in CEKIVA and go live at the given time. The caller receives `{"status":"SUCCESS","post_ids":[…],"total_credits_charged":…}`; with no credits it receives `status: ERROR` and the `INSUFFICIENT_CREDITS` code instead.

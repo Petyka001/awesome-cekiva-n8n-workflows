@@ -1,62 +1,48 @@
-# 01 · AI multi-platform content factory
+# 01 · AI Multi-Platform Content Factory
 
-Type a topic into a form; AI researches it, writes **a separate post for Instagram, Facebook and LinkedIn**, asks you to approve by e-mail, creates an image, and publishes everywhere through **one [CEKIVA](https://cekiva.com/?utm_source=github&utm_medium=template_repo&utm_campaign=n8n_starter) API call per network**. A summary arrives by e-mail and (optionally) Telegram.
+> Type a topic into a form: AI researches it, writes a separate post for Instagram, Facebook and LinkedIn, waits for your e-mail approval, creates an image, and CEKIVA publishes to all three with one request per network instead of three token-dependent native nodes.
 
-```
-Form → AI research + copy (GPT-4o, SerpAPI) → approval e-mail → image (OpenAI) → ImgBB → Build posts → CEKIVA POST /v1/posts → results → e-mail / Telegram
-```
+---
 
-## What you need
+## 1. Who is this workflow for?
+- **Target Audience:** Solo creators and small marketing teams that want AI-written, human-approved posts on Instagram, Facebook and LinkedIn.
+- **Experience Level:** Intermediate n8n user (several credentials: OpenAI, SerpAPI, Gmail, ImgBB).
 
-| What | Used for | n8n credential |
-|---|---|---|
-| **CEKIVA API key** | publishing | *Header Auth*, name `CEKIVA API key` |
-| OpenAI API key | the AI agents and the image | OpenAI |
-| SerpAPI key | the research tool | SerpApi |
-| Gmail account | approval and results e-mails | Gmail OAuth2 |
-| imgbb.com API key | hosting the image (CEKIVA needs a public image URL) | *Query Auth*, name `ImgBB API key` |
-| Telegram bot (optional) | the results summary in a chat; if you do not use it, delete the *Prepare Results Message* and *Telegram Results* nodes | Telegram |
+## 2. What problem does it solve?
+- **The Manual Pain:** Publishing the same idea to three networks means three native nodes or Graph API calls, Meta access tokens that expire without warning, a LinkedIn app to keep alive, an image host, and a stack of Merge nodes to join the branches. When one token lapses, one network silently stops.
+- **The Automated Solution:** One `POST /v1/posts` per network to CEKIVA, which holds and refreshes the connections. The Merge and routing nodes disappear, a failing network never blocks the others, and every answer comes back in one uniform shape (`error.code`, `error.message`, `error.hint`).
 
-## Set it up
+## 3. What do you need? (Prerequisites)
+- **Core Platform:** n8n instance (self-hosted or Cloud)
+- **Distribution API:** CEKIVA account and API key (`Authorization: Bearer <API_KEY>`, created under *Settings → API keys*). Connect your social accounts once in CEKIVA.
+- **External Services & Credentials:** OpenAI API key (the agents and the image); Google Gemini API key (the *Google Gemini LLM* node; see the note below); SerpAPI key (research tool); Gmail account (approval and result e-mails; OAuth2); imgbb.com API key (hosts the image; CEKIVA needs a public image URL here); Telegram bot (optional result summary).
+- **Known issue:** the *Google Gemini LLM* node still points at `models/gemini-2.0-flash-exp`, which Google no longer offers. Select a current Gemini model in that node (for example `gemini-2.5-flash`) before the first run.
+- **Setup guide:** step-by-step credentials and options are in [SETUP.md](SETUP.md).
+- **Technical Skills:** Basic understanding of importing n8n JSON and setting up credentials.
 
-1. **CEKIVA credential.** In CEKIVA open *Settings → API keys* and create a key (it starts with `tplk_` and is shown once). In n8n: *Credentials → Create → Header Auth*:
-   - **Name:** `CEKIVA API key`
-   - **Header name:** `Authorization`
-   - **Header value:** `Bearer tplk_...`
+## 4. Free vs. Paid Components
 
-   Select it in the node **CEKIVA: POST /v1/posts**. In CEKIVA, connect your Instagram, Facebook Page and LinkedIn once (there is no per-account fee).
-2. **ImgBB credential.** *Credentials → Create → Query Auth*: **name** `key`, **value** your imgbb.com API key. Select it in **Save Image to imgbb.com3**.
-3. **The other credentials:** OpenAI, SerpAPI, Gmail OAuth2 (and Telegram if you want the chat summary) in their nodes.
-4. **Where the messages go.** Type your own e-mail address into the three Gmail nodes (*Gmail User for Approval*, *Gmail Results*, and the disabled *Approve Final Post Content*): the field says `REPLACE_WITH_YOUR_EMAIL`. Put your chat id into *Telegram Results* (`REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID`). Until you do, those nodes stop with a clear error and nothing is sent to anyone else.
-5. **Options** at the top of the **Build CEKIVA posts** node:
+| Component | Cost Model | Details |
+| :--- | :--- | :--- |
+| **Workflow File (.json)** | **100% Free** | Open-source under the MIT License. |
+| **n8n Engine** | **Free / Variable** | Free if self-hosted (Community edition); paid if you use n8n Cloud. |
+| **CEKIVA Account & API Access** | **€0 / Free** | €0 account fee, €0 API access fee: no monthly subscription, no per-account fee, no developer-tier lock. |
+| **Social Publishing** | **Pay-as-you-go** | Credits are consumed only for what you publish (one dispatch per network). The price per post is shown in CEKIVA and set there; this README quotes no figure because it can change. |
+| **AI Generation Engine** | **Variable** | OpenAI (GPT-4o / GPT-4o-mini and image generation) and Google Gemini tokens, plus SerpAPI searches: billed by those providers at your plan's rates. |
+| **Third-Party Services** | **Free / Variable** | imgbb.com has a free tier (image hosting); Gmail and Telegram are free. No other image host is needed for CEKIVA itself. |
 
-   | Option | Meaning |
-   |---|---|
-   | `CLIENT_ID` | One of your CEKIVA client workspaces (`GET https://cekiva.com/api/v1/clients`). Empty = your primary workspace. The form can also pass a `client_id`. |
-   | `PUBLISH_NOW` | `true` (default) publishes right after approval; `false` uses `SCHEDULED_AT`. |
-   | `SCHEDULED_AT` | ISO 8601 with a time zone, e.g. `2027-03-01T09:00:00Z`. |
+*X (Twitter) is not supported: CEKIVA retired that channel.*
 
-6. Open the **Submit Social Post Details** form and use it.
+## 5. What you'll get (End-to-End Delivery)
+- **Input Data:** A topic typed into the form (and, optionally, a CEKIVA client workspace id).
+- **Automated Processing:** Web research, one tailored post per network (Instagram, Facebook, LinkedIn), an approval e-mail, AI image generation, image hosting, then one CEKIVA request per network.
+- **Final Output:** Three live posts (Instagram with the image, Facebook, LinkedIn) and a results e-mail, plus an optional Telegram summary.
+- **Your Remaining Task:** Choose the topic and click *approve* in the e-mail. Nothing is published without it.
 
-## The form
-
-| Field | Required | |
-|---|---|---|
-| Topic | yes | The main subject of the post. |
-| Keywords or Hashtags | no | Words the AI should work in. |
-| Link | no | A link to include. |
-
-## What happens at publishing
-
-Each network gets the text the AI wrote for it, in its own request: **Instagram** the caption, **Facebook** the post plus its call to action, **LinkedIn** the post, call to action and hashtags. The generated image is uploaded to ImgBB and its link is sent along. Each request answers separately, so a problem on one network never blocks the others. The results e-mail lists a `Success` or `Error` row per platform, with CEKIVA's error code and message.
-
-## Good to know
-
-- **Instagram needs an image.** If the image step fails, the Instagram row reports `IMAGE_REQUIRED`; Facebook and LinkedIn still go out as text posts.
-- **X (Twitter) is not included**: CEKIVA retired that channel, so the original's X post was removed. (The AI may still write an X text; it is simply not sent.)
-- Posting costs CEKIVA credits when published, and the AI/image steps use your own OpenAI and SerpAPI quota. A repeated call creates a second post.
-- Do not publish your own credentials with the exported workflow. This file contains none, only credential names.
-
-## Credit and license
-
-This workflow is **derived from a community template**: [Automated AI Powered Social Media Content Factory](https://n8n.io/workflows/3066) on n8n.io (the form is branded *workflows.diy*). The AI research and copywriting logic, the approval flow, the image step and the results summaries are the original author's work; only the publishing part was replaced by a CEKIVA API call, together with the setup notes and the changes described above. **The MIT license of this repository covers the changes made here. The original parts remain subject to the original author's terms**; please credit the original template when you share it, and see its page on n8n.io. If you are the original author and want this changed or removed, please open an issue.
+## 6. A Real-World Example
+- **Step 1: Input:**  
+  Form field *Topic*: `Spring offer: 20% off all houseplants until Sunday`
+- **Step 2: Processing:**  
+  The research agent searches the web, writes three platform-specific versions, mails you the draft; you approve. The image is generated and hosted, then three requests `POST https://cekiva.com/api/v1/posts` run (`platforms: ["instagram"]`, `["facebook_page"]`, `["linkedin"]`) with `publish_now: true`.
+- **Step 3: Delivered Result:**  
+  Instagram shows the generated image with a short caption and hashtags; the Facebook Page and LinkedIn each show their own wording of the offer. The results e-mail lists `Success` for each network, or the CEKIVA `error_code` (for example `INSUFFICIENT_CREDITS`) for any that failed. *(Illustrative wording; the AI writes new text on every run.)*

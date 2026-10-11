@@ -1,81 +1,47 @@
-# 07 · Publish an image or a video to multiple social networks → CEKIVA
+# 07 · Publish an Image or Video to Multiple Social Networks → CEKIVA
 
-A small form: pick the networks, write a caption, upload an **image or a video**. The workflow sends the file to CEKIVA and **CEKIVA publishes it to every network you ticked**: Facebook Page, Instagram, LinkedIn, Threads, Bluesky, TikTok and YouTube.
+> A small form: tick the networks, write a caption, upload an image or a video; CEKIVA hosts the file and publishes it to every network you ticked, with no recurring plan.
 
-```
-Form → Prepare media → image or video? → CEKIVA: upload image | upload video → Build CEKIVA posts → one POST /v1/posts per network → result page
-```
+---
 
-**A drop-in replacement for a per-seat publishing API, without the recurring subscription.** This is the "upload a file, tick the networks" form that Upload-Post style workflows offer, rebuilt on CEKIVA: **pay-as-you-go credits only, no monthly plan, no per-profile fee**. Connect your accounts once in CEKIVA; there is no "profile name" to type into the form and no second account to keep in sync. Prices are shown in CEKIVA.
+## 1. Who is this workflow for?
+- **Target Audience:** Freelancers and agencies who post client creative by hand, and anyone who wants an upload-and-publish form.
+- **Experience Level:** Beginner friendly.
 
-> **X (Twitter) is excluded on purpose.** CEKIVA retired that channel, so the form has no X option and the workflow no X node or `twitter` platform.
+## 2. What problem does it solve?
+- **The Manual Pain:** Posting one photo or clip to several networks means opening each app or keeping a per-seat publishing API and its profiles in sync, with a separate call for photos and for videos.
+- **The Automated Solution:** A password-protected form that sends the file to CEKIVA (`POST /v1/upload/image` or `/v1/upload/video`) and makes **one `POST /v1/posts` per ticked network**. Several networks per submission, one uniform result page, no monthly plan.
 
-## What changed from the community template
+## 3. What do you need? (Prerequisites)
+- **Core Platform:** n8n instance (self-hosted or Cloud)
+- **Distribution API:** CEKIVA account and API key (`Authorization: Bearer <API_KEY>`, created under *Settings → API keys*). Connect your social accounts once in CEKIVA.
+- **External Services & Credentials:** A form password of your choice (Basic Auth on the form).
+- **Setup guide:** the form fields, media limits and options are in [SETUP.md](SETUP.md).
+- **Technical Skills:** Basic understanding of importing n8n JSON and setting up credentials.
 
-Derived from the community template *Publish image/video to multiple social media* ([n8n.io/workflows/3669](https://n8n.io/workflows/3669); see the original page for its author and terms). Original: 14 nodes, this one: 10.
+## 4. Free vs. Paid Components
 
-| Original | Now |
-|---|---|
-| Upload-Post API: one call for photos, one for videos, an `Apikey` header, a "profile" per user | CEKIVA: `POST /v1/upload/image` or `/v1/upload/video`, then one `POST /v1/posts` per network; one API key |
-| One network per submission (a dropdown), including X | **Several networks at once** (checkboxes), X removed, Facebook Page, Bluesky and YouTube added |
-| An "Account" field with a profile name, plus a Facebook page id | an optional **Client workspace ID** (CEKIVA client workspaces); Pages are connected once in CEKIVA |
-| Only `image/jpeg` and `video/mp4` were routed; anything else got no answer | JPG, PNG, WebP, GIF, MP4, MOV, WebM; anything else is refused with a clear message |
-| Four "OK/KO" pages and two result/IF nodes | one result page listing every network (✅, ❌ with CEKIVA's error code, ⏭️ skipped) |
-| Open form | **Basic Auth on the form**, so a leaked URL cannot spend your credits |
-| An advertising image and a referral link in the notes | removed |
+| Component | Cost Model | Details |
+| :--- | :--- | :--- |
+| **Workflow File (.json)** | **100% Free** | Open-source under the MIT License. |
+| **n8n Engine** | **Free / Variable** | Free if self-hosted (Community edition); paid if you use n8n Cloud. |
+| **CEKIVA Account & API Access** | **€0 / Free** | €0 account fee, €0 API access fee: no monthly subscription, no per-account fee, no developer-tier lock. |
+| **Social Publishing** | **Pay-as-you-go** | Credits are consumed only for what you publish (one dispatch per network). The price per post is shown in CEKIVA and set there; this README quotes no figure because it can change. Uploads are free. |
+| **AI Generation Engine** | **Variable** | None. This workflow uses no AI. |
+| **Third-Party Services** | **Free / Variable** | None. CEKIVA hosts the uploaded file until the posts are published, then deletes it. |
 
-## Set it up
+*X (Twitter) is not supported: CEKIVA retired that channel.*
 
-1. **CEKIVA.** Connect the networks you use, then create an API key (*Settings → API keys*, starts with `tplk_`).
-2. **Two credentials in n8n** (*Credentials → Create*):
+## 5. What you'll get (End-to-End Delivery)
+- **Input Data:** A form with *Networks* (tick boxes), *Caption*, *Upload* (JPG, PNG, WebP, GIF, MP4, MOV or WebM) and an optional *Client workspace ID*.
+- **Automated Processing:** Detects image or video from the file type, names it for CEKIVA, uploads it, skips networks that cannot take it (TikTok and YouTube need a video), and dispatches one request per network.
+- **Final Output:** Live posts on every ticked network and a result page listing each outcome (✅, ❌ with the error code, ⏭️ skipped).
+- **Your Remaining Task:** Pick the networks, write the caption and attach the file.
 
-   | Credential name | Type | Value |
-   |---|---|---|
-   | `CEKIVA API key` | Header Auth | header `Authorization`, value `Bearer tplk_...` |
-   | `Form password` | Basic Auth | a user name and a password of your choice |
-
-3. Import `workflow.json`. Select `Form password` in **Post details** and `CEKIVA API key` in the three CEKIVA nodes (**CEKIVA: upload image**, **CEKIVA: upload video**, **CEKIVA: POST /v1/posts**).
-4. **Activate** the workflow and open the production URL of **Post details**. Your browser asks for the form password.
-
-> The form is protected on purpose: an open form would let anyone who finds the URL publish on your accounts and spend your credits.
-
-## The form
-
-| Field | Required | Meaning |
-|---|---|---|
-| Networks | yes | Tick one or more: Facebook Page, Instagram, LinkedIn, Threads, Bluesky, TikTok (video only), YouTube (video only). |
-| Caption | yes | The text of the post, sent as it is to every network you ticked. |
-| Upload | yes | One image (JPG, PNG, WebP, GIF) or one video (MP4, MOV, WebM). |
-| Client workspace ID | no | The id of one of your CEKIVA client workspaces (a UUID, listed by `GET https://cekiva.com/api/v1/clients`). Empty = your own workspace. |
-
-## Images and videos
-
-The workflow looks at the file's type and sends it to CEKIVA first, because CEKIVA hosts the file until the posts are published (then deletes it). That hosted link is what every network receives, which is also what TikTok requires: it only fetches videos that CEKIVA hosts.
-
-- **Image** (up to 8 MB): published to Facebook Page, Instagram, LinkedIn, Threads, Bluesky. **TikTok and YouTube are skipped** for an image (they need a video) and the result page says so.
-- **Video** (up to 300 MB): can go to every listed network. TikTok and YouTube need one.
-- **Instagram always needs media**, which the form guarantees: the upload is required.
-- n8n limits the size of an upload through the form too (`N8N_PAYLOAD_SIZE_MAX`, 16 MB by default). For larger videos raise that setting on your n8n.
-
-## Output
-
-The result page lists what happened, for example:
-
-```
-✅ facebook_page (scheduled)
-✅ instagram (scheduled)
-❌ bluesky: INSUFFICIENT_CREDITS …
-⏭️ youtube skipped: youtube needs a video, you uploaded an image
-```
-
-The full rows (`platform`, `result`, `post_id`, `post_status`, `credits_charged`, `error_code`, `error_message`, `hint`) are the output of **Label CEKIVA results**. One network failing never stops the others, because each network is its own request. Branch on `error_code`, not on the text. If the upload itself fails (file too large or of the wrong type), the form shows an error and the details are in *Executions*; uploads cost no credits.
-
-## Options
-
-At the top of **Build CEKIVA posts**: `PUBLISH_NOW` (default `true`) and `SCHEDULED_AT` (ISO 8601 with a time zone) to publish later instead.
-
-## Good to know
-
-- Posting costs credits from the CEKIVA wallet of the workspace owner; uploads are free.
-- A repeated form submission posts again: the API has no idempotency key.
-- The same caption goes to every network. For per-network copy written by AI, see workflow 06.
+## 6. A Real-World Example
+- **Step 1: Input:**  
+  *Networks:* `Instagram, LinkedIn, TikTok (video only)` · *Caption:* `Behind the scenes at the studio` · *Upload:* `studio.mp4`
+- **Step 2: Processing:**  
+  The file is recognised as a video and uploaded with `POST /v1/upload/video`; three `POST /v1/posts` requests follow with the returned CEKIVA-hosted URL.
+- **Step 3: Delivered Result:**  
+  The clip appears on Instagram, LinkedIn and TikTok with the same caption. Had you uploaded a photo instead, TikTok would be reported as `⏭️ tiktok skipped: tiktok needs a video, you uploaded an image` and the other two would still post.

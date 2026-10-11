@@ -1,68 +1,48 @@
-# 05 · Clone viral TikToks with AI avatars → CEKIVA
+# 05 · Clone Viral TikToks with AI Avatars → CEKIVA
 
-Send a TikTok link to your Telegram bot. The workflow downloads and analyses the video, asks Perplexity for a fresh idea on the same topic, has an **AI avatar** speak the rewritten script, adds the overlay text, and then **CEKIVA publishes the finished video to TikTok, Instagram, YouTube, Facebook, LinkedIn and Threads**.
+> Send a TikTok link to your Telegram bot: the workflow analyses it, Perplexity suggests a fresh idea, an AI avatar speaks the new script, and CEKIVA uploads and publishes the video to TikTok, Instagram, YouTube, Facebook, LinkedIn and Threads.
 
-```
-Telegram (TikTok link) → Only my chat → download + thumbnail + audio → GPT analysis → Perplexity idea → GPT rewrite
-  → avatar video (Captions.ai) → overlay text (JSON2Video) → preview in Telegram
-  → download final video → CEKIVA: upload video → CEKIVA: POST /v1/posts (one per network) → results in Telegram
-```
+---
 
-> **No monthly subscription for the social distribution.** CEKIVA is pay-as-you-go: you pay credits per post, with no per-account fee and no plan. The prices are shown in CEKIVA. The other services in this workflow (OpenAI, Perplexity, Captions.ai, JSON2Video, RapidAPI, Cloudinary) are billed by those vendors.
->
-> **X (Twitter) is excluded on purpose:** CEKIVA retired that channel, so the workflow has no X node and no `twitter` platform.
+## 1. Who is this workflow for?
+- **Target Audience:** TikTok-first creators and social media managers who build avatar or faceless video channels.
+- **Experience Level:** Advanced n8n user (many third-party services and a long pipeline).
 
-## What changed from the community template
+## 2. What problem does it solve?
+- **The Manual Pain:** This pipeline needs a video-download service, an image host, GPT analysis, Perplexity, an avatar service, a text-overlay renderer, a Google Sheet and a publishing service with its own account ids, plus one node per network. Every extra key is another thing that expires.
+- **The Automated Solution:** The publishing half collapses into CEKIVA: **`POST /v1/upload/video`** hosts the finished video (TikTok only fetches CEKIVA-hosted files) and **one `POST /v1/posts` per network** publishes it. The Blotato account ids and the nine per-network nodes are gone, and only your own Telegram chat can start a run.
 
-Derived from the community template *Clone a viral TikTok and auto-post it to 9 platforms using Perplexity & Blotato* ([n8n.io/workflows/4110](https://n8n.io/workflows/4110); see the original page for its author and terms). Original: 41 nodes, this one: 39.
+## 3. What do you need? (Prerequisites)
+- **Core Platform:** n8n instance (self-hosted or Cloud)
+- **Distribution API:** CEKIVA account and API key (`Authorization: Bearer <API_KEY>`, created under *Settings → API keys*). Connect your social accounts once in CEKIVA.
+- **External Services & Credentials:** Telegram bot (trigger and previews); OpenAI API key (GPT-4o analysis and rewrite, transcription); Perplexity API key; RapidAPI key for a TikTok download API; Cloudinary account (thumbnail hosting); Captions.ai API key (the avatar step); JSON2Video API key (overlay text); Google Sheets (the log).
+- **Known risk:** the Captions.ai address used by the original template (`api.captions.ai`) did not answer like a working API when we checked. If the avatar step fails, replace it with the avatar service you use: everything from **Download final video** onwards only needs a public video URL.
+- **Setup guide:** the `YOUR_...` placeholders and options are in [SETUP.md](SETUP.md).
+- **Technical Skills:** Basic understanding of importing n8n JSON and setting up credentials.
 
-| Original | Now |
-|---|---|
-| Blotato: a media upload, an "Assign Social Media IDs" node with account ids, and 9 platform nodes (11 nodes) | **CEKIVA:** one video upload and one `POST /v1/posts` request per network (accounts are the ones you connected in CEKIVA) |
-| Bluesky, Pinterest and X | gone: Pinterest needs an image, Bluesky was dropped from this template, X is retired |
-| Anyone who found your bot could start it | **`Only my chat`**: only your Telegram chat id, and only a TikTok link, starts a run. Everything else is ignored |
-| The final video was only sent to Telegram | the result of every network comes back to the same chat |
-| Perplexity `sonar-reasoning` | `sonar-reasoning-pro` (the older model is being retired; this was not tested against a live key) |
-| Google Sheet ids, links and a private image link inside the file | removed; you point the three Google Sheets nodes at your own copy |
+## 4. Free vs. Paid Components
 
-Kept as they were: the Telegram trigger, the TikTok download (RapidAPI), Cloudinary, GPT-4o analysis and rewrite, Perplexity, Captions.ai avatars, JSON2Video overlay and the Google Sheets log.
+| Component | Cost Model | Details |
+| :--- | :--- | :--- |
+| **Workflow File (.json)** | **100% Free** | Open-source under the MIT License. |
+| **n8n Engine** | **Free / Variable** | Free if self-hosted (Community edition); paid if you use n8n Cloud. |
+| **CEKIVA Account & API Access** | **€0 / Free** | €0 account fee, €0 API access fee: no monthly subscription, no per-account fee, no developer-tier lock. |
+| **Social Publishing** | **Pay-as-you-go** | Credits are consumed only for what you publish (one dispatch per network; video upload is free). The price per post is shown in CEKIVA and set there; this README quotes no figure because it can change. |
+| **AI Generation Engine** | **Variable** | OpenAI and Perplexity tokens, plus Captions.ai and JSON2Video renders: all billed by those vendors. RapidAPI and Cloudinary have their own plans. |
+| **Third-Party Services** | **Free / Variable** | Several paid or metered services as listed above. CEKIVA replaces only the publishing and the video hosting. |
 
-## Set it up
+*X (Twitter) is not supported: CEKIVA retired that channel.*
 
-1. **CEKIVA.** Connect your TikTok, Instagram, YouTube, Facebook Page, LinkedIn and Threads accounts, then create an API key (*Settings → API keys*, starts with `tplk_`).
-2. **n8n credential** (*Credentials → Create → Header Auth*): name `CEKIVA API key`, header name `Authorization`, value `Bearer tplk_...`. Select it in **CEKIVA: upload video** and **CEKIVA: POST /v1/posts**.
-3. **Telegram.** Create a bot with [@BotFather](https://t.me/BotFather), add it as the Telegram credential (trigger, *Send Video URL*, *Send Final Video Preview*, *Telegram: publishing results*). Find your chat id by messaging [@userinfobot](https://t.me/userinfobot), then put it into **Only my chat** in place of `REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID`. **Until you do, the workflow ignores every message.**
-4. **The services of the first three steps**, as in the original:
-   - OpenAI (GPT-4o, audio transcription): the OpenAI credential on the `GPT` nodes.
-   - RapidAPI: replace `YOUR_API_KEY` in **Download TikTok Video (RapidAPI)**.
-   - Cloudinary: **Upload Thumbnail to Cloudinary**, your cloud name in the URL (`YOUR_ID`) and a Basic Auth credential, plus an unsigned upload preset called `n8n_clone`.
-   - Perplexity: replace `YOUR_TOKEN_HERE` in **Suggest Similar Idea (Perplexity)**.
-   - Captions.ai: replace `YOUR_API_KEY` in the three Captions nodes.
-   - JSON2Video: a Custom Auth credential for **Add Overlay Text with JSON2Video** and **Fetch Final Video from JSON2Video**.
-   - Google Sheets: a credential, and in the three Sheets nodes your own copy of the log sheet (`REPLACE_WITH_YOUR_SHEET_ID`; the columns are the French ones of the original template).
-5. **Options**, at the top of **Build CEKIVA posts**: `PLATFORMS` (remove those you did not connect), `CLIENT_ID` (a CEKIVA client workspace; empty = your primary workspace), `PUBLISH_NOW` / `SCHEDULED_AT`, `AI_LABEL`.
-6. Send your bot a TikTok link.
+## 5. What you'll get (End-to-End Delivery)
+- **Input Data:** A Telegram message containing a TikTok URL, sent from your own chat.
+- **Automated Processing:** Download and analyse the video, idea by Perplexity, script rewrite, AI avatar video, overlay text, then upload to CEKIVA and publish.
+- **Final Output:** The new video live on up to six networks, a preview in Telegram and a summary of every network's result.
+- **Your Remaining Task:** Send the link, look at the preview, and decide on the *AI-generated* label (off by default). You are responsible for what you publish and for the platforms' rules on AI avatars and reused content.
 
-## Inputs and outputs
-
-Input: a Telegram message containing only a TikTok URL (`tiktok.com`, `vm.tiktok.com`, ...), from your chat.
-
-Output: the avatar video URL and a preview in Telegram, then a summary such as
-
-```
-CEKIVA publishing:
-✅ tiktok
-✅ instagram
-❌ youtube: INSUFFICIENT_CREDITS …
-```
-
-The full rows (`platform`, `result`, `post_id`, `post_status`, `credits_charged`, `error_code`, `error_message`, `hint`) are the output of **Label CEKIVA results**. Branch on `error_code`, not on the text.
-
-## Good to know
-
-- **It publishes right away, with no approval step** (as the original did). Watch the first runs, or set `PUBLISH_NOW` to `false` and a `SCHEDULED_AT` time to get a window to delete a post in CEKIVA.
-- **TikTok needs the video hosted by CEKIVA.** That is why the finished video is downloaded and uploaded with `POST /v1/upload/video` before posting; the same hosted copy is used for every network. CEKIVA deletes it once the posts have been published. The upload needs the workflow's **Name the file** step: TikTok reads the type from the `.mp4` name.
-- **The "AI-generated" label is your decision.** An avatar video is AI-generated content; set `AI_LABEL` to `true` to have TikTok mark it as such. It is `false` by default, because CEKIVA never labels a video on its own.
-- **Copying other people's ideas.** The workflow rewrites the topic and script rather than reposting the video, but you are responsible for what you publish; check each platform's rules on AI avatars and reused content.
-- **Vendor APIs change.** In October 2026 the Captions.ai address used by the original (`api.captions.ai`) did not answer like a working API for us, and we could not test it with a key. If the avatar step fails, swap in the avatar service you use; everything from **Download final video** onwards only needs a public video URL in the sheet's `URL de la vidéo` column.
-- A repeated run makes a new video and new posts: the API has no idempotency key.
+## 6. A Real-World Example
+- **Step 1: Input:**  
+  Telegram message from your chat: `https://www.tiktok.com/@somecreator/video/7300000000000000000`
+- **Step 2: Processing:**  
+  The workflow rewrites the idea, renders the avatar video, then **Download final video → CEKIVA: upload video** returns a hosted `.mp4` URL and six requests `POST /v1/posts` run (`tiktok`, `instagram`, `youtube`, `facebook_page`, `linkedin`, `threads`).
+- **Step 3: Delivered Result:**  
+  Your Telegram chat receives `✅ tiktok ✅ instagram ✅ youtube ❌ linkedin: INSUFFICIENT_CREDITS …` style lines; the successful networks show the avatar video with the AI-written caption. *(Illustrative.)*
