@@ -96,7 +96,7 @@
         "options": {
           "temperature": 0.4
         },
-        "modelName": "models/gemini-2.0-flash-exp"
+        "modelName": "models/gemini-2.5-flash"
       },
       "credentials": {
         "googlePalmApi": {

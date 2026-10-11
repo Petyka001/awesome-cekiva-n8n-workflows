@@ -15,8 +15,7 @@
 ## 3. What do you need? (Prerequisites)
 - **Core Platform:** n8n instance (self-hosted or Cloud)
 - **Distribution API:** CEKIVA account and API key (`Authorization: Bearer <API_KEY>`, created under *Settings → API keys*). Connect your social accounts once in CEKIVA.
-- **External Services & Credentials:** OpenAI API key (the agents and the image); Google Gemini API key (the *Google Gemini LLM* node; see the note below); SerpAPI key (research tool); Gmail account (approval and result e-mails; OAuth2); imgbb.com API key (hosts the image; CEKIVA needs a public image URL here); Telegram bot (optional result summary).
-- **Known issue:** the *Google Gemini LLM* node still points at `models/gemini-2.0-flash-exp`, which Google no longer offers. Select a current Gemini model in that node (for example `gemini-2.5-flash`) before the first run.
+- **External Services & Credentials:** OpenAI API key (the agents and the image); SerpAPI key (research tool); Gmail account (approval and result e-mails; OAuth2); imgbb.com API key (hosts the image; CEKIVA needs a public image URL here); Telegram bot (optional result summary).
 - **Setup guide:** step-by-step credentials and options are in [SETUP.md](SETUP.md).
 - **Technical Skills:** Basic understanding of importing n8n JSON and setting up credentials.
 
@@ -28,7 +27,7 @@
 | **n8n Engine** | **Free / Variable** | Free if self-hosted (Community edition); paid if you use n8n Cloud. |
 | **CEKIVA Account & API Access** | **€0 / Free** | €0 account fee, €0 API access fee: no monthly subscription, no per-account fee, no developer-tier lock. |
 | **Social Publishing** | **Pay-as-you-go** | Credits are consumed only for what you publish (one dispatch per network). The price per post is shown in CEKIVA and set there; this README quotes no figure because it can change. |
-| **AI Generation Engine** | **Variable** | OpenAI (GPT-4o / GPT-4o-mini and image generation) and Google Gemini tokens, plus SerpAPI searches: billed by those providers at your plan's rates. |
+| **AI Generation Engine** | **Variable** | OpenAI (GPT-4o / GPT-4o-mini and image generation) tokens, plus SerpAPI searches: billed by those providers at your plan's rates. The workflow also contains a disabled *Google Gemini LLM* node (set to `gemini-2.5-flash`) as an optional alternative model; it needs a Google Gemini API key only if you enable it. |
 | **Third-Party Services** | **Free / Variable** | imgbb.com has a free tier (image hosting); Gmail and Telegram are free. No other image host is needed for CEKIVA itself. |
 
 *X (Twitter) is not supported: CEKIVA retired that channel.*
