@@ -1,12 +1,12 @@
 # awesome-cekiva-n8n-workflows
 
-Free, open-source [n8n](https://n8n.io) workflows that publish to **nine social networks with one HTTP request**, through the [CEKIVA](https://cekiva.com/?utm_source=github&utm_medium=template_repo&utm_campaign=n8n_starter) API. No monthly subscription required.
+Open-source (MIT) [n8n](https://n8n.io) workflows that publish to **nine social networks with one HTTP request**, through the [CEKIVA](https://cekiva.com/?utm_source=github&utm_medium=template_repo&utm_campaign=n8n_starter) API. The workflow files are free; **CEKIVA itself is not free**: it is pay-as-you-go, you buy credits and spend them on every published post. There is no monthly subscription.
 
 ## What is CEKIVA?
 
 [CEKIVA](https://cekiva.com/?utm_source=github&utm_medium=template_repo&utm_campaign=n8n_starter) is **publishing as a service**. You connect your social accounts once, then post from anything that can send an HTTP request: n8n, Make, a script, an AI agent.
 
-- **Pay as you go.** You buy credits and spend them when a post is published. There is no monthly fee and no lock-in, and credits do not expire at the end of the month. Current prices are on [cekiva.com](https://cekiva.com/?utm_source=github&utm_medium=template_repo&utm_campaign=n8n_starter).
+- **Pay as you go.** You buy credits and spend them when a post is published; new accounts can post free during their first 7 days. There is no monthly fee and no lock-in. Current prices are on [cekiva.com](https://cekiva.com/?utm_source=github&utm_medium=template_repo&utm_campaign=n8n_starter).
 - **No per-account surcharge.** Connect as many profiles as you like.
 - **Nine networks, one endpoint.** LinkedIn, TikTok, YouTube, Pinterest, Bluesky, Discord, Facebook Pages, Instagram and Threads (plus Facebook Reels for video).
 - **Client workspaces.** Separate accounts per client, roles and an internal approval flow, for agencies and freelancers.
@@ -30,7 +30,7 @@ X (Twitter) is not supported: CEKIVA retired that channel.
 
 ## Quick start (every workflow)
 
-1. **Create a CEKIVA account** and connect your networks. Free to start; see the site for pricing.
+1. **Create a CEKIVA account** and connect your networks. Posting is free during your first 7 days; after that you pay credits per post, see the site for the current price.
 2. **Create an API key**: in CEKIVA open *Settings → API keys*. The key starts with `tplk_` and is shown once.
 3. **Add the credential in n8n**: *Credentials → Create → Header Auth*
    - **Name:** `CEKIVA API key`

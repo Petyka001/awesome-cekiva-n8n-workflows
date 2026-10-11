@@ -25,12 +25,12 @@
 | :--- | :--- | :--- |
 | **Workflow File (.json)** | **100% Free** | Open-source under the MIT License. |
 | **n8n Engine** | **Free / Variable** | Free if self-hosted (Community edition); paid if you use n8n Cloud. |
-| **CEKIVA Account & API Access** | **€0 / Free** | €0 account fee, €0 API access fee: no monthly subscription, no per-account fee, no developer-tier lock. |
-| **Social Publishing** | **Pay-as-you-go** | Credits are consumed only for what you publish (one dispatch per network and row). The price per post is shown in CEKIVA and set there; this README quotes no figure because it can change. |
+| **CEKIVA Account & API Access** | **No separate fee** | No monthly subscription, no per-account fee, no API surcharge, no developer-tier lock. This is not the same as free: publishing is paid, see the next row. |
+| **Social Publishing (CEKIVA)** | **Paid: pay-as-you-go credits** | **CEKIVA is not free.** Every published post costs credits (one dispatch per network and row), billed per post and network; CEKIVA shows the price before you publish and it can change, so check cekiva.com. New accounts can post free during their first 7 days. |
 | **AI Generation Engine** | **Variable** | Google Gemini tokens (`gemini-2.5-flash` by default), at most three rows per run by default. Check Google's current terms for free-tier limits. |
 | **Third-Party Services** | **Free / Variable** | Google Sheets is free with a Google account. No image host is needed (the `Image URL` column goes straight to CEKIVA). |
 
-*X (Twitter) is not supported: CEKIVA retired that channel.*
+*No prices are quoted here because they can change: see cekiva.com. X (Twitter) is not supported: CEKIVA retired that channel.*
 
 ## 5. What you'll get (End-to-End Delivery)
 - **Input Data:** A calendar row with `Status = READY`, a `Topic`, and optionally `Brief`, `Link`, `Image URL`, `Publish At`, `Client ID` and `Platforms`.
