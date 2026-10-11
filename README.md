@@ -26,6 +26,7 @@ X (Twitter) is not supported: CEKIVA retired that channel.
 | [06](workflows/06-gemini-ai-social-content-generator-cekiva) | **Form + Gemini AI social generator** | A form (title, keywords, optional link and image); Gemini writes a separate post for Facebook, Instagram, LinkedIn, Threads and Bluesky; CEKIVA publishes each. Written from scratch, MIT, password-protected form. X (Twitter) is not included. |
 | [07](workflows/07-publish-image-video-to-multiple-socials-cekiva) | **Publish an image or video to multiple networks** | A password-protected form: tick the networks, write a caption, upload an image or a video; CEKIVA hosts the file and publishes it to Facebook Page, Instagram, LinkedIn, Threads, Bluesky, TikTok and YouTube. No monthly plan. X (Twitter) is not included. |
 | [08](workflows/08-calendar-to-social-multiplatform-cekiva) | **Content calendar → AI copy → CEKIVA** | Plan posts in a Google Sheet; every hour the READY rows get AI copy per network from Gemini and CEKIVA publishes or schedules them to Facebook Page, Instagram, LinkedIn, Threads and Bluesky, then writes the result back to the row. No Merge nodes, no expiring Graph API tokens. X (Twitter) is not included. |
+| [09](workflows/09-content-publishing-factory-prompt-composition-cekiva) | **Content publishing factory with prompt composition** | Chat with a router agent; the system prompt and output schema live in Google Docs; AI writes the post and an image; you approve by e-mail; CEKIVA hosts the image and publishes to Instagram, Facebook Page, LinkedIn, Threads or Bluesky. One dispatch instead of Meta/X token trees and merge switches. X (Twitter) is not included. |
 
 ## Quick start (every workflow)
 
@@ -68,4 +69,4 @@ Issues and pull requests are welcome: new workflows, fixes, better docs. Please 
 
 ## License
 
-[MIT](LICENSE). Workflows 01, 03, 04, 05 and 07 are derived from community templates; see their READMEs for the credit and what that means.
+[MIT](LICENSE). Workflows 01, 03, 04, 05, 07 and 09 are derived from community templates; see their READMEs for the credit and what that means.

@@ -1,0 +1,106 @@
+<common>
+{
+    "type": "object",
+    "properties": {
+        "hashtags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "image_suggestion": {
+            "type": "string"
+        }
+    }
+}
+</common>
+
+<root>
+{
+    "type": "object",
+    "properties": {
+        "name": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "additional_notes": {
+            "type": "string"
+        }
+    }
+}
+</root>
+
+<linkedin>
+{
+    "type": "object",
+    "properties": {
+        "post": {
+            "type": "string"
+        },
+        "call_to_action": {
+            "type": "string"
+        }
+    }
+}
+</linkedin>
+
+<instagram>
+{
+    "type": "object",
+    "properties": {
+        "caption": {
+            "type": "string"
+        },
+        "emojis": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "call_to_action": {
+            "type": "string"
+        }
+    }
+}
+</instagram>
+
+<facebook>
+{
+    "type": "object",
+    "properties": {
+        "post": {
+            "type": "string"
+        },
+        "call_to_action": {
+            "type": "string"
+        }
+    }
+}
+</facebook>
+
+<threads>
+{
+    "type": "object",
+    "properties": {
+        "text_post": {
+            "type": "string"
+        },
+        "call_to_action": {
+            "type": "string"
+        }
+    }
+}
+</threads>
+
+<bluesky>
+{
+    "type": "object",
+    "properties": {
+        "post": {
+            "type": "string"
+        }
+    }
+}
+</bluesky>
