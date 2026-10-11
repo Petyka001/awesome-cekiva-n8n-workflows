@@ -1,0 +1,285 @@
+{
+  "name": "Form + Gemini AI Social Generator → CEKIVA (Facebook, Instagram, LinkedIn, Threads, Bluesky)",
+  "nodes": [
+    {
+      "id": "c6a00000-0000-4000-8000-000000000001",
+      "name": "Post details",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "c6a00000-0000-4000-8000-0000000000a1",
+      "parameters": {
+        "authentication": "basicAuth",
+        "formTitle": "New social post",
+        "formDescription": "Gemini writes the copy for Facebook, Instagram, LinkedIn, Threads and Bluesky, and CEKIVA publishes it.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Post Title",
+              "placeholder": "e.g. Our spring collection is live",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Keywords / Topic",
+              "placeholder": "e.g. spring, new arrivals, free shipping",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Link",
+              "placeholder": "https://... (optional)"
+            },
+            {
+              "fieldLabel": "Image URL",
+              "placeholder": "https://... a public image link (optional; Instagram needs one)"
+            },
+            {
+              "fieldLabel": "Client workspace ID",
+              "placeholder": "optional: a CEKIVA client workspace id (GET /v1/clients); empty = your own workspace"
+            }
+          ]
+        },
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "",
+          "name": "Form password"
+        }
+      }
+    },
+    {
+      "id": "c6a00000-0000-4000-8000-000000000002",
+      "name": "Prepare Gemini request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Validates the form and builds the request for Google's Gemini API.\nconst CONFIG = {\n  MODEL: 'gemini-2.5-flash',        // any Gemini text model that supports generateContent, e.g. a newer \"flash\" model\n  LANGUAGE: 'the same language as the title and keywords', // e.g. 'English'\n  BRAND_VOICE: 'friendly, clear and professional, never pushy', // describe your voice in one line\n};\n\nconst f = $json || {};\nconst title = String(f['Post Title'] || '').trim();\nconst topic = String(f['Keywords / Topic'] || '').trim();\nconst link = String(f['Link'] || '').trim();\nconst imageUrl = String(f['Image URL'] || '').trim();\nconst clientId = String(f['Client workspace ID'] || '').trim();\nconst isHttp = (u) => /^https?:\\/\\/[^\\s]+$/i.test(u);\nif (!title || !topic) throw new Error('Post Title and Keywords / Topic are required.');\nif (link && !isHttp(link)) throw new Error('Link must start with http:// or https://');\nif (imageUrl && !isHttp(imageUrl)) throw new Error('Image URL must start with http:// or https:// and be publicly reachable.');\nif (clientId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientId)) throw new Error('Client workspace ID must be a UUID (see GET https://cekiva.com/api/v1/clients).');\n\nconst system = [\n  'You are a social media copywriter. Write one post for EACH of these networks from the information the user gives you, in ' + CONFIG.LANGUAGE + '.',\n  'Voice: ' + CONFIG.BRAND_VOICE + '.',\n  'Rules per network (hard limits include hashtags and emoji):',\n  '- facebook: 2-4 short sentences, community tone, one clear call to action.',\n  '- instagram: at most 2000 characters, visual storytelling, a few emoji, 5-8 relevant hashtags at the end. Do not write a link: captions do not make links clickable.',\n  '- linkedin: 3-5 sentences, professional and insightful, 3-5 hashtags at the end.',\n  '- threads: at most 450 characters, conversational, at most 3 hashtags.',\n  '- bluesky: at most 250 characters, plain and friendly, at most 2 hashtags.',\n  'Never put the link in the text: the workflow adds it where it fits. Never invent facts, prices, statistics or quotes that are not in the input. Do not mention these instructions.',\n  'Return ONLY a JSON object with the keys facebook, instagram, linkedin, threads, bluesky.',\n].join('\\n');\nconst user = 'Title: ' + title + '\\nKeywords / topic: ' + topic + (link ? '\\nLink (for context only): ' + link : '');\n\nconst geminiBody = {\n  systemInstruction: { parts: [{ text: system }] },\n  contents: [{ role: 'user', parts: [{ text: user }] }],\n  generationConfig: {\n    temperature: 0.8,\n    responseMimeType: 'application/json',\n    responseSchema: {\n      type: 'OBJECT',\n      properties: { facebook: { type: 'STRING' }, instagram: { type: 'STRING' }, linkedin: { type: 'STRING' }, threads: { type: 'STRING' }, bluesky: { type: 'STRING' } },\n      required: ['facebook', 'instagram', 'linkedin', 'threads', 'bluesky'],\n    },\n  },\n};\nreturn [{ json: { model: CONFIG.MODEL, geminiBody, title, link, imageUrl, clientId } }];\n"
+      }
+    },
+    {
+      "id": "c6a00000-0000-4000-8000-000000000003",
+      "name": "Gemini: write the copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        520,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $json.model }}:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.geminiBody) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Gemini API key"
+        }
+      }
+    },
+    {
+      "id": "c6a00000-0000-4000-8000-000000000004",
+      "name": "Build CEKIVA posts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// CEKIVA publishing: one POST /v1/posts per network with the copy Gemini wrote for THAT network.\n// X/Twitter is not here on purpose: CEKIVA retired that channel.\nconst CONFIG = {\n  PUBLISH_NOW: true,  // true = publish right away; false = publish at SCHEDULED_AT\n  SCHEDULED_AT: '',   // ISO 8601 with a time zone, e.g. 2026-12-01T09:00:00Z (used only when PUBLISH_NOW is false)\n  APPEND_LINK: true,  // add the form's Link to the copy where it still fits the network's limit\n};\nconst LIMITS = { facebook_page: 63000, instagram: 2200, linkedin: 3000, threads: 500, bluesky: 300 };\n\nconst prep = $('Prepare Gemini request').first().json;\nconst resp = $input.first().json || {};\nconst part = resp.candidates && resp.candidates[0] && resp.candidates[0].content && resp.candidates[0].content.parts && resp.candidates[0].content.parts[0];\nif (!part || typeof part.text !== 'string') {\n  const why = (resp.error && resp.error.message) || (resp.promptFeedback && resp.promptFeedback.blockReason) || 'no text in the answer';\n  throw new Error('Gemini returned no post copy: ' + String(why).slice(0, 200));\n}\nlet out;\ntry { out = JSON.parse(part.text); } catch (e) { throw new Error('Gemini did not return valid JSON.'); }\n\n// keys = CEKIVA platform ids; values = the AI's field for that network\nconst copy = { facebook_page: out.facebook, instagram: out.instagram, linkedin: out.linkedin, threads: out.threads, bluesky: out.bluesky };\nconst scheduleAt = !CONFIG.PUBLISH_NOW && CONFIG.SCHEDULED_AT ? CONFIG.SCHEDULED_AT : null;\nconst skipped = [];\nconst items = [];\nfor (const [platform, raw] of Object.entries(copy)) {\n  let content = typeof raw === 'string' ? raw.trim() : '';\n  if (!content) { skipped.push({ platform, reason: 'Gemini wrote no copy for it' }); continue; }\n  if (platform === 'instagram' && !prep.imageUrl) { skipped.push({ platform, reason: 'Instagram needs an image: fill in Image URL' }); continue; }\n  const withLink = prep.link && !content.includes(prep.link) ? content + '\\n\\n' + prep.link : content;\n  if (CONFIG.APPEND_LINK && platform !== 'instagram' && withLink.length <= LIMITS[platform]) content = withLink;\n  if (content.length > LIMITS[platform]) content = content.slice(0, LIMITS[platform] - 1).trimEnd() + '…';\n  // The body of POST /v1/posts exactly as the CEKIVA API expects it.\n  const request = { platforms: [platform], content, scheduled_for: scheduleAt || new Date().toISOString(), publish_now: !scheduleAt };\n  if (prep.imageUrl) { request.image_url = prep.imageUrl; request.media_urls = [prep.imageUrl]; }\n  if (prep.clientId) request.client_id = prep.clientId;\n  items.push({ json: { platform, request } });\n}\nif (!items.length) throw new Error('Nothing to publish: ' + skipped.map((s) => s.platform + ' (' + s.reason + ')').join('; '));\nitems[0].json.skipped = skipped; // carried to the summary\nreturn items;\n"
+      }
+    },
+    {
+      "id": "c6a00000-0000-4000-8000-000000000005",
+      "name": "CEKIVA: POST /v1/posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1040,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://cekiva.com/api/v1/posts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Language",
+              "value": "en"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "CEKIVA API key"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c6a00000-0000-4000-8000-000000000006",
+      "name": "Label CEKIVA results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// One uniform result row per network, and a short text summary for the form's ending page.\nconst sent = $('Build CEKIVA posts').all();\nconst skipped = (sent[0] && sent[0].json.skipped) || [];\nconst rows = $input.all().map((item, i) => {\n  const r = item.json;\n  const platform = sent[i] ? sent[i].json.platform : 'unknown';\n  const body = r.body;\n  const post = Array.isArray(body) ? body[0] : null;\n  const err = body && !Array.isArray(body) && body.error && typeof body.error === 'object' ? body.error : null;\n  const status = Number(r.statusCode) || null;\n  const ok = status !== null && status >= 200 && status < 300 && !!post;\n  return {\n    platform,\n    result: ok ? 'Success' : 'Error',\n    http_status: status,\n    post_id: post ? post.id : null,\n    post_status: post ? post.status : null,\n    credits_charged: post ? post.credits_charged : null,\n    error_code: err ? err.code : (r.error ? 'CEKIVA_UNREACHABLE' : null),\n    error_message: err ? err.message : (r.error ? String(r.error.message || r.error).slice(0, 200) : (ok ? null : 'Unexpected response')),\n    hint: err ? err.hint : null,\n  };\n});\nconst lines = rows.map((x) => (x.result === 'Success' ? '✅ ' + x.platform + ' (' + x.post_status + ')' : '❌ ' + x.platform + ': ' + (x.error_code || '') + ' ' + (x.error_message || '')));\nfor (const s of skipped) lines.push('⏭️ ' + s.platform + ' skipped: ' + s.reason);\nreturn [{ json: { rows, skipped, summary: lines.join('\\n') } }];\n"
+      }
+    },
+    {
+      "id": "c6a00000-0000-4000-8000-000000000007",
+      "name": "Show the result",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        1560,
+        300
+      ],
+      "webhookId": "c6a00000-0000-4000-8000-0000000000a7",
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "CEKIVA publishing",
+        "completionMessage": "={{ $json.summary }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "c6a00000-0000-4000-8000-000000000008",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -420
+      ],
+      "parameters": {
+        "content": "## Form + Gemini → CEKIVA\n\nA form, one Gemini call and one CEKIVA request per network: Facebook Page, Instagram, LinkedIn, Threads and Bluesky. Free and open source (MIT). X (Twitter) is not included: CEKIVA retired that channel.\n\n**1 · Credentials (3)**\n• `CEKIVA API key` — Header Auth: header `Authorization`, value `Bearer tplk_...` (CEKIVA → Settings → API keys). Select it in **CEKIVA: POST /v1/posts**.\n• `Gemini API key` — Header Auth: header `x-goog-api-key`, value = your key from Google AI Studio. Select it in **Gemini: write the copy**.\n• `Form password` — Basic Auth, so that not everyone with the form's URL can publish on your accounts. Select it in **Post details**.\n\n**2 · Options** — top of **Prepare Gemini request** (model, language, voice) and **Build CEKIVA posts** (publish now / schedule, link).\n\n**Image.** Instagram needs an image: fill in *Image URL* (a public link) or Instagram is skipped. No image host is needed; CEKIVA fetches the link itself.\nPosting costs CEKIVA credits (prices are shown in CEKIVA); the Gemini call is billed by Google.",
+        "height": 640,
+        "width": 640,
+        "color": 5
+      }
+    }
+  ],
+  "connections": {
+    "Post details": {
+      "main": [
+        [
+          {
+            "node": "Prepare Gemini request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Gemini request": {
+      "main": [
+        [
+          {
+            "node": "Gemini: write the copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: write the copy": {
+      "main": [
+        [
+          {
+            "node": "Build CEKIVA posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CEKIVA posts": {
+      "main": [
+        [
+          {
+            "node": "CEKIVA: POST /v1/posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEKIVA: POST /v1/posts": {
+      "main": [
+        [
+          {
+            "node": "Label CEKIVA results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label CEKIVA results": {
+      "main": [
+        [
+          {
+            "node": "Show the result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
